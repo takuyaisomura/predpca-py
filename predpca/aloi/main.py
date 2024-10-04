@@ -1,0 +1,87 @@
+import time
+from pathlib import Path
+
+import numpy as np
+
+from predpca.aloi.predpca_utils import predict_encoding, preproc_data
+from predpca.aloi.visualize import plot_hidden_state, plot_true_and_pred_video
+from predpca.predpca import compute_Q, create_basis_functions, predict_input, predict_input_pca
+
+start_time = time.time()
+
+T_train = 57600  # number of training data
+T_test = 14400  # number of test data
+
+Ns = 300  # dimensionality of inputs
+Nu = 128  # dimensionality of encoders
+Nv = 20  # number of hidden states to visualize
+
+Kf = 5  # number of predicting points
+Kf_viz = 2  # predicting point to visualize
+Kp = 19  # number of reference points
+Kp2 = 37  # number of reference points
+WithNoise = False  # presence of noise
+
+# Priors (small constants) to prevent inverse matrix from being singular
+prior_s = 100.0
+prior_s_ = 100.0
+
+out_dir = Path(__file__).parent / "output" / Path(__file__).stem
+
+
+def main(
+    out_dir: Path,
+    preproc_out_dir: Path = Path(__file__).parent / "output",
+    seed: int = 0,
+):
+    print("----------------------------------------")
+    print("PredPCA of 3D rotating object images")
+    print("----------------------------------------\n")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    np.random.seed(1000000 + seed)
+
+    print("loading data")
+    npz = np.load(preproc_out_dir / "aloi_data.npz")
+    data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
+
+    print("preprocessing")
+    _, s_target_train, s_target_test, ts_input1, _ = preproc_data(data, T_train, T_test, Kf, Kp, Kp2, WithNoise)
+
+    # PredPCA
+    print(f"create basis functions: {(time.time() - start_time) / 60:.1f} min")
+    s_train_, se_test_ = create_basis_functions(data, Kp, T_train, T_test, ts_input1)
+
+    print(f"maximum likelihood estimation: {(time.time() - start_time) / 60:.1f} min")
+    Q = compute_Q(s_train_, s_target_train, prior_s_=prior_s_)
+    se_train = predict_input(Q, s_train_)  # (Kf, Ns, T_train)
+    se_test = predict_input(Q, se_test_)  # (Kf, Ns, T_test)
+
+    W_pca_post = predict_input_pca(se_train)[0].T
+    u_test = W_pca_post @ se_test[Kf_viz]  # predictive encoders (test) (Ns, T_test)
+    u_sub_, _, _, _ = predict_encoding(W_pca_post, se_train, se_test)
+
+    # visualizations
+    PCA_C1 = npz["PCA_C1"]  # (2, 2, Ndata1, Ndata1)
+    PCA_C2 = npz["PCA_C2"]  # (Ndata2, Ndata2)
+    mean1 = npz["mean1"]  # (2, 2, Ndata1)
+
+    # true and predicted images (for Fig 3a and Suppl Movie)
+    print(f"true and predicted images (time = {(time.time() - start_time) / 60:.1f} min)")
+    print("create supplementary movie")
+    plot_true_and_pred_video(W_pca_post, u_test, s_target_test, PCA_C1, PCA_C2, mean1, out_dir)
+    print("----------------------------------------\n")
+
+    # hidden state analysis
+    # ICA of mean encoders (for Fig 3b and Suppl Fig 4)
+    print(f"ICA of mean encoders (time = {(time.time() - start_time) / 60:.1f} min)")
+    plot_hidden_state(W_pca_post, u_sub_, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
+
+    print("----------------------------------------\n")
+
+
+if __name__ == "__main__":
+    main(
+        out_dir=out_dir,
+        seed=0,
+    )

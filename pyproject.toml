@@ -1,0 +1,36 @@
+[project]
+name = "predpca"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "scikit-learn",
+    "moviepy",      # need ffmpeg
+    "scikit-image",
+    "torch",
+    "torchvision",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+    "predpca",
+    "predpca.utils",
+    "predpca.mnist",
+    "predpca.aloi",
+    "predpca.bdd100k",
+]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]
