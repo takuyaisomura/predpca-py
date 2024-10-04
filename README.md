@@ -28,7 +28,7 @@ It is recommended to use a virtual environment for installation. This project ha
 
 2. Install
 - Before installing, install FFmpeg and make sure it is in the PATH.  
-    (e.g. `sudo apt install ffmpeg` on Debian/Ubuntu, `brew install ffmpeg` on macOS)
+    Use the [official download links](https://ffmpeg.org/download.html) or package managers (e.g. `sudo apt install ffmpeg` on Debian/Ubuntu, `brew install ffmpeg` on macOS)
 - Option 1: Install from PyPI
     ```
     pip install predpca-py
