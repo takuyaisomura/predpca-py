@@ -63,7 +63,7 @@ def main(
     # PredPCA
     print("PredPCA")
     print("- compute maximum likelihood estimator")
-    s_train_, s_test_ = create_basis_functions(np.concatenate([s_train, s_test], axis=1), Kp, T_train, T_test)
+    s_train_, s_test_ = create_basis_functions(s_train, s_test, range(1, Kp + 1))
     Q = compute_Q(s_train_, s_train, prior_s_=prior_s_)
     se_train = predict_input(Q, s_train_)  # (Ns, T_train)
     se_test = predict_input(Q, s_test_)  # (Ns, T_test)

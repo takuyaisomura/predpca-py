@@ -55,36 +55,36 @@ def create_shifted_arrays(array, model_order):
 def create_multistep_state(ui_shifted, order):
     Nu = ui_shifted[0].shape[0]
     if order == 1:
-        return ui_shifted[0]
+        return ui_shifted[0]  # (Nu, T)
     elif order == 2:
-        return ui_shifted[1].repeat(Nu, axis=0) * np.tile(ui_shifted[0], (Nu, 1))
+        return ui_shifted[1].repeat(Nu, axis=0) * np.tile(ui_shifted[0], (Nu, 1))  # (Nu**2, T)
     elif order == 3:
         return (
             ui_shifted[2].repeat(Nu**2, axis=0)
             * np.tile(ui_shifted[1].repeat(Nu, axis=0), (Nu, 1))
             * np.tile(ui_shifted[0], (Nu**2, 1))
-        )
+        )  # (Nu**3, T)
     elif order == 4:
         return (
             ui_shifted[3].repeat(Nu**3, axis=0)
             * np.tile(ui_shifted[2].repeat(Nu**2, axis=0), (Nu, 1))
             * np.tile(ui_shifted[1].repeat(Nu, axis=0), (Nu**2, 1))
             * np.tile(ui_shifted[0], (Nu**3, 1))
-        )
+        )  # (Nu**4, T)
 
 
 def create_multistep_state_t(ui, order, t):
     if order == 1:
-        return ui[:, t - 1]
+        return ui[:, t - 1]  # (Nu,)
     elif order == 2:
-        return np.kron(ui[:, t - 1], ui[:, t - 2])
+        return np.kron(ui[:, t - 1], ui[:, t - 2])  # (Nu**2,)
     elif order == 3:
         return np.kron(
             np.kron(ui[:, t - 1], ui[:, t - 2]),
             ui[:, t - 3],
-        )
+        )  # (Nu**3,)
     elif order == 4:
         return np.kron(
             np.kron(ui[:, t - 1], ui[:, t - 2]),
             np.kron(ui[:, t - 3], ui[:, t - 4]),
-        )
+        )  # (Nu**4,)

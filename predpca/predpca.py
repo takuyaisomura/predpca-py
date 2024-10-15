@@ -5,27 +5,34 @@ from predpca.utils.pcacov import pcacov
 
 
 def create_basis_functions(
-    data: np.ndarray,  # (Ns, T_train + T_test)
-    Kp: int,  # number of basis functions
-    T_train: int,
-    T_test: int,
-    ts: np.ndarray | None = None,  # (Kp, T_train + T_test)
+    s_train: np.ndarray,  # (Ns, T_train)
+    s_test: np.ndarray,  # (Ns, T_test)
+    Kp_list: list[int] | range,  # past timepoints to be used for basis functions
     gain: np.ndarray | None = None,  # (Nu, Ns)
 ):
-    if gain is not None:
-        data = gain @ data  # (Nu, T_train + T_test)
+    # multi_seq with n_seq = 1
+    return create_basis_functions_multi_seq(s_train[:, np.newaxis, :], s_test[:, np.newaxis, :], Kp_list, gain)
 
-    enc_dim = data.shape[0]
-    s_train_ = np.zeros((enc_dim * Kp, T_train))
-    s_test_ = np.zeros((enc_dim * Kp, T_test))
-    if ts is not None:
-        for k in range(Kp):
-            s_train_[enc_dim * k : enc_dim * (k + 1), :] = data[:, ts[k, :T_train]]
-            s_test_[enc_dim * k : enc_dim * (k + 1), :] = data[:, ts[k, -T_test:]]
-    else:
-        for k in range(Kp):
-            s_train_[enc_dim * k : enc_dim * (k + 1), :] = np.roll(data[:, :T_train], k + 1, axis=1)
-            s_test_[enc_dim * k : enc_dim * (k + 1), :] = np.roll(data[:, -T_test:], k + 1, axis=1)
+
+def create_basis_functions_multi_seq(
+    s_train: np.ndarray,  # (Ns, n_seq_train, seq_len)
+    s_test: np.ndarray,  # (Ns, n_seq_test, seq_len)
+    Kp_list: list[int] | range,  # past timepoints to be used for basis functions
+    gain: np.ndarray | None = None,  # (Nu, Ns)
+) -> tuple[np.ndarray, np.ndarray]:
+    if gain is not None:
+        s_train = np.einsum("ij, jkl -> ikl", gain, s_train)  # (Nu, n_seq_train, seq_len)
+        s_test = np.einsum("ij, jkl -> ikl", gain, s_test)  # (Nu, n_seq_test, seq_len)
+
+    enc_dim, n_seq_train, seq_len_train = s_train.shape
+    _, n_seq_test, seq_len_test = s_test.shape
+    Kp = len(Kp_list)
+
+    s_train_ = np.zeros((enc_dim * Kp, n_seq_train * seq_len_train))
+    s_test_ = np.zeros((enc_dim * Kp, n_seq_test * seq_len_test))
+    for i, k in enumerate(Kp_list):
+        s_train_[enc_dim * i : enc_dim * (i + 1), :] = np.roll(s_train, k, axis=-1).reshape(enc_dim, -1)
+        s_test_[enc_dim * i : enc_dim * (i + 1), :] = np.roll(s_test, k, axis=-1).reshape(enc_dim, -1)
 
     return s_train_, s_test_
 

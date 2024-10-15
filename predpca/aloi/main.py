@@ -5,7 +5,7 @@ import numpy as np
 
 from predpca.aloi.predpca_utils import predict_encoding, preproc_data
 from predpca.aloi.visualize import plot_hidden_state, plot_true_and_pred_video
-from predpca.predpca import compute_Q, create_basis_functions, predict_input, predict_input_pca
+from predpca.predpca import compute_Q, create_basis_functions_multi_seq, predict_input, predict_input_pca
 
 start_time = time.time()
 
@@ -16,10 +16,9 @@ Ns = 300  # dimensionality of inputs
 Nu = 128  # dimensionality of encoders
 Nv = 20  # number of hidden states to visualize
 
-Kf = 5  # number of predicting points
-Kf_viz = 2  # predicting point to visualize
-Kp = 19  # number of reference points
-Kp2 = 37  # number of reference points
+Kp_list = range(0, 37, 2)  # past timepoints to be used for basis functions
+Kf_list = [6, 12, 18, 24, 30]  # future timepoints to be used for prediction targets
+Kf_viz = 2  # Kf_viz-th timepoint in Kf_list will be visualized
 WithNoise = False  # presence of noise
 
 # Priors (small constants) to prevent inverse matrix from being singular
@@ -46,11 +45,11 @@ def main(
     data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
 
     print("preprocessing")
-    _, s_target_train, s_target_test, ts_input1, _ = preproc_data(data, T_train, T_test, Kf, Kp, Kp2, WithNoise)
+    s_train, s_test, s_target_train, s_target_test = preproc_data(data, T_train, T_test, Kf_list, WithNoise)
 
     # PredPCA
     print(f"create basis functions: {(time.time() - start_time) / 60:.1f} min")
-    s_train_, se_test_ = create_basis_functions(data, Kp, T_train, T_test, ts_input1)
+    s_train_, se_test_ = create_basis_functions_multi_seq(s_train, s_test, Kp_list)
 
     print(f"maximum likelihood estimation: {(time.time() - start_time) / 60:.1f} min")
     Q = compute_Q(s_train_, s_target_train, prior_s_=prior_s_)
@@ -78,6 +77,8 @@ def main(
     plot_hidden_state(W_pca_post, u_sub_, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
 
     print("----------------------------------------\n")
+
+    return u_test, u_sub_
 
 
 if __name__ == "__main__":
