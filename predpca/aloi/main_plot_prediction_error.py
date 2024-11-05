@@ -69,7 +69,6 @@ def main(
     }
     s_train_, s_test_ = create_basis_functions_multi_seq(s_train, s_test, Kp_list)
     # s_train_: (Ns*Kp, T_train), s_test_: (Ns*Kp, T_test)
-    S_S_ = np.zeros((Ns * Kp, Ns * Kp))
 
     _, n_seq_train, seq_len = s_train.shape
     for h in range(NT):
@@ -81,13 +80,12 @@ def main(
         s_sub = s_train[:, :n_seq_sub]
         s_sub_ = s_train_[:, :T_sub]
         s_target_sub = s_target_train[:, :, :T_sub]
-        S_S_ += s_sub_[:, T_train * h // NT :] @ s_sub_[:, T_train * h // NT :].T  # add S_S_ for this section
+
         pred_err_em, se_sub, _, W_pca_post = run_with_limited_samples(
             s_sub_,
             s_test_,
             s_target_sub,
             s_target_test,
-            S_S_,
             Nu_list[h],
         )
         err_s1["em"][:, :, h] = pred_err_em
@@ -166,12 +164,10 @@ def run_with_limited_samples(
     s_test_,  # (Ns*Kp, T_test)
     s_target_sub,  # (Kf, Ns, T_sub)
     s_target_test,  # (Kf, Ns, T_test)
-    S_S_,  # (Ns*Kp, Ns*Kp)
     Nu,  # int
 ):
     # maximum likelihood estimation
-    S_S_inv = linalg.inv(S_S_ + np.eye(Ns * Kp) * prior_s_)  # (Ns*Kp, Ns*Kp)
-    Q = compute_Q(s_sub_, s_target_sub, S_S_inv=S_S_inv)  # (Kf, Ns, Ns*Kp)
+    Q = compute_Q(s_sub_, s_target_sub, prior_s_=prior_s_)  # (Kf, Ns, Ns*Kp)
     se_sub = predict_input(Q, s_sub_)  # (Kf, Ns, T_sub)
     se_test = predict_input(Q, s_test_)  # (Kf, Ns, T_test)
 

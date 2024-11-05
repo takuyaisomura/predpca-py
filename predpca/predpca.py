@@ -40,8 +40,7 @@ def create_basis_functions_multi_seq(
 def compute_Q(
     s_train_: np.ndarray,  # (N*Kp, T)
     s_train_target: np.ndarray,  # (Kf, Ns, T) | (Ns, T)
-    S_S_inv: np.ndarray | None = None,  # (N*Kp, N*Kp)
-    prior_s_: float | int | None = None,
+    prior_s_: float,
 ) -> np.ndarray:
     if s_train_target.ndim == 2:  # accept 2d input if Kf == 1
         s_train_target = s_train_target[np.newaxis]  # (1, Ns, T)
@@ -49,11 +48,7 @@ def compute_Q(
     Kf, Ns, _ = s_train_target.shape
     Nphi = s_train_.shape[0]
 
-    if S_S_inv is None:
-        assert isinstance(prior_s_, (float, int))
-        S_S_inv = linalg.inv(s_train_ @ s_train_.T + np.eye(Nphi) * prior_s_)
-    else:
-        assert isinstance(S_S_inv, np.ndarray)
+    S_S_inv = linalg.inv(s_train_ @ s_train_.T + np.eye(Nphi) * prior_s_)
 
     Q = np.empty((Kf, Ns, Nphi))
     for k in range(Kf):
