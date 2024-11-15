@@ -29,8 +29,6 @@ Nu = 10  # encoding dimensionality
 Kp = 40  # order of past observations used for prediction
 Nv = 10  # encoding dimensionality
 
-model_orders = [1, 2, 3, 4]
-
 data_dir = Path(__file__).parent / "data"
 out_dir = Path(__file__).parent / "output" / Path(__file__).stem
 
@@ -39,6 +37,7 @@ def main(
     sequence_type: int,  # 1=ascending, 2=Fibonacci
     data_dir: Path,
     out_dir: Path,
+    max_model_order: int = 4,
     seed: int = 0,
 ):
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +76,7 @@ def main(
     print("PredPCA")
     print("- compute maximum likelihood estimator")
     # se_train: (Ns, T_train), se_test: (Ns, T_test)
-    s_train_, s_test_ = create_basis_functions(np.concatenate([s_train, s_test], axis=1), Kp, T_train, T_test)
+    s_train_, s_test_ = create_basis_functions(s_train, s_test, range(1, Kp + 1))
     Q = compute_Q(s_train_, s_train, prior_s_=prior_s_)  # (Ns, Ns * Kp)
     se_train = predict_input(Q, s_train_)  # (Ns, T_train)
     se_test = predict_input(Q, s_test_)  # (Ns, T_test)
@@ -120,6 +119,7 @@ def main(
     Image.fromarray(img).save(out_dir / f"output_{seq_label}_true_{seed}_99991_100000.png")
 
     AICs = []
+    model_orders = range(1, max_model_order + 1)
     for order in model_orders:
         print(f"order: {order}")
         output, _, _, matB, AIC = wta_prediction(ui_train, v_test, input_train, input_mean, prior_u, prior_u_, order)

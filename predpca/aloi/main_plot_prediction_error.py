@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 
 from predpca.aloi.predpca_utils import predict_encoding, prediction_error, preproc_data
 from predpca.aloi.visualize import plot_hidden_state, plot_test_images, plot_true_and_pred_video
-from predpca.predpca import compute_Q, create_basis_functions, predict_input, predict_input_pca
+from predpca.predpca import compute_Q, create_basis_functions_multi_seq, predict_input, predict_input_pca
 
 start_time = time.time()
 
@@ -19,10 +19,12 @@ Ns = 300  # dimensionality of inputs
 Nu = 128  # dimensionality of encoders
 Nv = 20  # number of hidden states to visualize
 
-Kf = 5  # number of predicting points
-Kf_viz = 2  # predicting point to visualize
-Kp = 19  # number of reference points
-Kp2 = 37  # number of reference points
+Kp_list = range(0, 37, 2)  # past timepoints to be used for basis functions
+Kp2_list = range(37)  # past timepoints to be used for basis functions (optimal)
+Kf_list = [6, 12, 18, 24, 30]  # future timepoints to be used for prediction targets
+Kf_viz = 2  # Kf_viz-th timepoint in Kf_list will be visualized
+Kp = len(Kp_list)
+Kf = len(Kf_list)
 WithNoise = False  # presence of noise
 
 # Priors (small constants) to prevent inverse matrix from being singular
@@ -57,9 +59,7 @@ def main(
     data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
 
     print("preprocessing")
-    s_train, s_target_train, s_target_test, ts_input1, ts_input2 = preproc_data(
-        data, T_train, T_test, Kf, Kp, Kp2, WithNoise
-    )
+    s_train, s_test, s_target_train, s_target_test = preproc_data(data, T_train, T_test, Kf_list, WithNoise)
 
     print("investigate the accuracy with limited number of training samples")
 
@@ -67,25 +67,25 @@ def main(
         "em": np.zeros((Kf, Ns, NT)),  # PredPCA empirical
         "em_opt": np.zeros((Kf, Ns, NT)),  # PredPCA empirical (optimal)
     }
-    s_train_, s_test_ = create_basis_functions(data, Kp, T_train, T_test, ts_input1)
+    s_train_, s_test_ = create_basis_functions_multi_seq(s_train, s_test, Kp_list)
     # s_train_: (Ns*Kp, T_train), s_test_: (Ns*Kp, T_test)
-    S_S_ = np.zeros((Ns * Kp, Ns * Kp))
 
+    _, n_seq_train, seq_len = s_train.shape
     for h in range(NT):
-        T_sub = T_train * (h + 1) // NT  # number of training samples
+        n_seq_sub = n_seq_train * (h + 1) // NT  # number of training sequences
+        T_sub = n_seq_sub * seq_len  # number of training samples
         print(f"training with T = {T_sub} (time = {(time.time() - start_time) / 60:.1f} min)")
 
         print("compute PredPCA with plain bases")
-        s_sub = s_train[:, :T_sub]
+        s_sub = s_train[:, :n_seq_sub]
         s_sub_ = s_train_[:, :T_sub]
         s_target_sub = s_target_train[:, :, :T_sub]
-        S_S_ += s_sub_[:, T_train * h // NT :] @ s_sub_[:, T_train * h // NT :].T  # (Ns*Kp, Ns*Kp)
+
         pred_err_em, se_sub, _, W_pca_post = run_with_limited_samples(
             s_sub_,
             s_test_,
             s_target_sub,
             s_target_test,
-            S_S_,
             Nu_list[h],
         )
         err_s1["em"][:, :, h] = pred_err_em
@@ -95,7 +95,7 @@ def main(
         print("compute PredPCA with optimal bases")
         # optimal basis functions
         Gain = qA.T @ linalg.inv(qSigmao)  # optimal gain; (Nu, Ns)
-        s_opt_sub_, s_opt_test_ = create_basis_functions(data, Kp2, T_sub, T_test, ts_input2, gain=Gain)
+        s_opt_sub_, s_opt_test_ = create_basis_functions_multi_seq(s_sub, s_test, Kp2_list, gain=Gain)
         # maximum likelihood estimation
         pred_err_em_opt, se_sub, se_test, W_pca_post_opt = run_with_limited_samples_opt(
             s_opt_sub_,
@@ -164,12 +164,10 @@ def run_with_limited_samples(
     s_test_,  # (Ns*Kp, T_test)
     s_target_sub,  # (Kf, Ns, T_sub)
     s_target_test,  # (Kf, Ns, T_test)
-    S_S_,  # (Ns*Kp, Ns*Kp)
     Nu,  # int
 ):
     # maximum likelihood estimation
-    S_S_inv = linalg.inv(S_S_ + np.eye(Ns * Kp) * prior_s_)  # (Ns*Kp, Ns*Kp)
-    Q = compute_Q(s_sub_, s_target_sub, S_S_inv=S_S_inv)  # (Kf, Ns, Ns*Kp)
+    Q = compute_Q(s_sub_, s_target_sub, prior_s_=prior_s_)  # (Kf, Ns, Ns*Kp)
     se_sub = predict_input(Q, s_sub_)  # (Kf, Ns, T_sub)
     se_test = predict_input(Q, s_test_)  # (Kf, Ns, T_test)
 
@@ -184,11 +182,13 @@ def run_with_limited_samples(
 
 def identify_system_param(
     W_pca_post,  # (Nu, Ns)
-    s_sub,  # (Ns, T)
+    s_sub,  # (Ns, n_seq, seq_len)
     se_sub,  # (Kf, Ns, T)
 ):
-    T = s_sub.shape[1]
+    T = se_sub.shape[-1]
     Nu, Ns = W_pca_post.shape
+
+    s_sub = s_sub.reshape(Ns, -1)  # flatten; (Ns, T)
 
     # system parameter identification
     u_sub = W_pca_post @ se_sub[0]  # predictive encoders (training) (Nu, T)
