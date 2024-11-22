@@ -22,27 +22,31 @@ class ICA(BaseEstimator, TransformerMixin):
         self.post_std_scaling_: np.ndarray | None = None
         self.skewness_signs_: np.ndarray | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> Self:
-        """Learn the ICA matrix with pre/post processing
+    def fit(
+        self,
+        X: np.ndarray,
+        X_test: np.ndarray,
+    ) -> Self:
+        """Learn the ICA matrix and compute transformation parameters
 
         Args:
             X: array-like of shape (n_samples, n_features)
                 encodings of training data
-            y: None
-                ignored (for API compatibility)
+            X_test: array-like of shape (n_samples, n_features)
+                encodings of test data for computing skewness signs
 
         Returns:
             self: object
                 trained Transformer
         """
-        self._fit(X)
+        self._fit(X, X_test)
         return self
 
-    def fit_transform(self, X: np.ndarray) -> np.ndarray:
-        transformed = self._fit(X)
-        return transformed
+    def fit_transform(self, X: np.ndarray, X_test: np.ndarray) -> np.ndarray:
+        X_ica = self._fit(X, X_test)
+        return X_ica
 
-    def _fit(self, X: np.ndarray) -> None:
+    def _fit(self, X: np.ndarray, X_test: np.ndarray) -> None:
         X_t = X.T  # (n_features, n_samples)
         n_features, n_samples = X_t.shape
 
@@ -52,30 +56,32 @@ class ICA(BaseEstimator, TransformerMixin):
         X_normalized = self.pre_std_scaling_ @ X_t  # (n_features, n_samples)
 
         # ICA learning
-        rnd = np.random.randn(self.n_classes, n_features)
-        Wica, _, _ = linalg.svd(rnd)
+        rndn = np.random.randn(self.n_classes, n_features)
+        Wica, _, _ = linalg.svd(rndn)
 
         sample_size = n_samples // 10
         for _ in tqdm(range(self.n_iterations), desc="ICA"):
             rnd = np.random.randint(n_samples, size=sample_size)
-            ui_train = Wica @ X_normalized[:, rnd]
-            g = np.sqrt(2) * np.tanh(100 * ui_train)
-            Wica += self.learning_rate * (Wica - (g @ ui_train.T / sample_size) @ Wica)
+            X_ica = Wica @ X_normalized[:, rnd]  # (n_classes, sample_size)
+            g = np.sqrt(2) * np.tanh(100 * X_ica)
+            Wica += self.learning_rate * (Wica - (g @ X_ica.T / sample_size) @ Wica)
 
         self.Wica_ = Wica
-        transformed = self.Wica_ @ X_normalized  # (n_classes, n_samples)
+        X_ica = self.Wica_ @ X_normalized  # (n_classes, n_samples)
+
+        # Compute skewness signs using test data to adjust the sign of components
+        X_test_ica = self.Wica_ @ self.pre_std_scaling_ @ X_test.T  # (n_classes, n_samples)
+        self.skewness_signs_ = np.sign(stats.skew(X_test_ica, axis=1, keepdims=True))  # (n_classes, 1)
 
         # postprocess
-        self.skewness_signs_ = np.sign(stats.skew(transformed, axis=0))
-        transformed *= self.skewness_signs_
-
-        transformed_std = np.diag(np.std(transformed, axis=1, ddof=1))
+        X_ica *= self.skewness_signs_
+        transformed_std = np.diag(np.std(X_ica, axis=1, ddof=1))
         self.post_std_scaling_ = np.sqrt(0.1) * linalg.inv(transformed_std)
-        transformed = self.post_std_scaling_ @ transformed  # (n_classes, n_samples)
+        X_ica = self.post_std_scaling_ @ X_ica  # (n_classes, n_samples)
 
-        return transformed.T  # (n_samples, n_classes)
+        return X_ica.T  # (n_samples, n_classes)
 
-    def transform(self, X):
+    def transform(self, X: np.ndarray) -> np.ndarray:
         """Transform the data using the learned ICA matrix with pre/post processing
 
         Args:
@@ -86,16 +92,8 @@ class ICA(BaseEstimator, TransformerMixin):
             X_transformed: array-like of shape (n_samples, n_features)
                 transformed encodings
         """
-        X_t = X.T  # (n_features, n_samples)
-
-        # preprocess
-        X_normalized = self.pre_std_scaling_ @ X_t  # (n_features, n_samples)
-
-        # ICA transform
-        transformed = self.Wica_ @ X_normalized  # (n_classes, n_samples)
-
-        # postprocess
-        transformed *= self.skewness_signs_
-        transformed = self.post_std_scaling_ @ transformed  # (n_classes, n_samples)
-
-        return transformed.T  # (n_samples, n_classes)
+        X_normalized = self.pre_std_scaling_ @ X.T  # (n_features, n_samples)
+        X_ica = self.Wica_ @ X_normalized  # (n_classes, n_samples)
+        X_ica *= self.skewness_signs_
+        X_ica = self.post_std_scaling_ @ X_ica  # (n_classes, n_samples)
+        return X_ica.T  # (n_samples, n_classes)

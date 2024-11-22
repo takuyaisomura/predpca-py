@@ -3,23 +3,31 @@ from pathlib import Path
 import numpy as np
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
-from predpca.models.base_autoencoder import BaseAutoEncoder
+from predpca.models.base_encoder import BaseEncoder
 from predpca.models.baselines.vae.vae import VAE
-from predpca.models.wta_classifier import ICA, WTAClassifier
+from predpca.models.decoder import Decoder
+from predpca.models.ica import ICA
+from predpca.models.predpca.encoder import PredPCAEncoder
+from predpca.models.wta_classifier import WTAClassifier
 
 mnist_dir = Path(__file__).parent
 data_dir = mnist_dir / "data"
 out_dir = mnist_dir / "output" / "model_comparison"
 
+prior_u = 1.0
+
+np.random.seed(1000000)
+
 
 def main():
+    out_dir.mkdir(parents=True, exist_ok=True)
     results = compare_models(data_dir)
 
     # Display the results
     for model_name, metrics in results.items():
         print(f"\nResults for {model_name}:")
         for metric_name, value in metrics.items():
-            print(f"{metric_name}: {value:.4f}")
+            print(f"{metric_name}: {value}")
 
 
 def compare_models(
@@ -28,6 +36,7 @@ def compare_models(
     train_size: int = 100000,
     test_size: int = 100000,
 ):
+
     # Prepare data
     input_train, input_test, _, _, label_test, _ = create_digit_sequence(
         data_dir,
@@ -40,61 +49,69 @@ def compare_models(
         train_signflip=True,
         test_signflip=False,
     )
-    input_train = input_train.T  # (n_features, n_samples)
-    input_test = input_test.T  # (n_features, n_samples)
+    input_train = input_train.T  # (n_samples, input_dim)
+    input_test = input_test.T  # (n_samples, input_dim)
     label_test = label_test.ravel()  # (n_samples,)
 
-    # Prepare models
-    models = [
+    # Prepare encoders
+    encoders = [
         VAE(epochs=10),
-        # PredPCA(),
+        PredPCAEncoder(Ns=40, Nu=10, kp_list=range(1, 41), prior_s_=100),
     ]
 
-    # Evaluate models
-    results = {model.name: evaluate_model(model, input_train, input_test, label_test) for model in models}
+    # Evaluate encoders
+    results = {encoder.name: evaluate_encoder(encoder, input_train, input_test, label_test) for encoder in encoders}
 
     return results
 
 
-def evaluate_model(
-    model: BaseAutoEncoder,
-    X_train: np.ndarray,
-    X_test: np.ndarray,
-    y_test: np.ndarray,
+def evaluate_encoder(
+    encoder: BaseEncoder,
+    input_train: np.ndarray,
+    input_test: np.ndarray,
+    label_test: np.ndarray,
 ) -> dict[str, float]:
-    """Evaluate a single model using specified classifier and metrics
+    """Evaluate a single encoder using specified classifier and metrics
 
     Args:
-        model: Model instance to evaluate
-        X_train: Training data (n_features, n_samples)
-        X_test: Test data (n_features, n_samples)
-        y_test: Test labels (n_samples,)
+        encoder: Model instance to evaluate
+        input_train: Training data (n_samples, input_dim)
+        input_test: Test data (n_samples, input_dim)
+        label_test: Test labels (n_samples,)
         classifier: Classifier to use for evaluation. If None, uses ICAWTAClassifier
 
     Returns:
         Dictionary of metric names to values
     """
+    input_mean = input_train.mean(axis=0, keepdims=True)
+    input_train -= input_mean
+    input_test -= input_mean
+
+    # encode
+    encoder.fit(input_train)
+    train_encodings = encoder.encode(input_train)
+    test_encodings = encoder.encode(input_test)
+
+    # ICA
     ica = ICA(n_classes=10)
-    classifier = WTAClassifier()
-
-    # Train model and classifier
-    model.fit(X_train)
-    train_encodings = model.encode(X_train)
-    ica.fit(train_encodings)
-
-    # Encode and classify test data
-    test_encodings = model.encode(X_test)
+    train_ica = ica.fit_transform(train_encodings, test_encodings)
     test_ica = ica.transform(test_encodings)
 
+    # Classify
+    classifier = WTAClassifier()
+    pred_onehot = classifier.predict(test_ica)
+
     # Compute metrics
-    categorization_error = classifier.compute_categorization_error(test_ica, y_test)
+    categorization_error = classifier.compute_categorization_error(pred_onehot, label_test)
     metrics = {
         "categorization_error": categorization_error,
     }
 
     # Visualize reconstructions
-    reconst_data = model.decode(test_encodings)
-    visualize_reconstructions(X_test, reconst_data, out_dir / f"{model.name.lower()}_reconstructions.png")
+    decoder = Decoder(prior_u=prior_u, input_mean=input_mean)
+    decoder.fit(input_train, train_ica)
+    reconst_data = decoder.transform(pred_onehot)
+    visualize_reconstructions(input_test, reconst_data, out_dir / f"{encoder.name.lower()}_reconstructions.png")
 
     return metrics
 

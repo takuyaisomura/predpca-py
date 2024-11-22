@@ -6,11 +6,11 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from predpca.models.base_autoencoder import BaseAutoEncoder
+from predpca.models.base_encoder import BaseEncoder
 from predpca.models.baselines.vae.model import VAEModel
 
 
-class VAE(BaseAutoEncoder):
+class VAE(BaseEncoder):
     def __init__(
         self,
         epochs: int = 10,
@@ -93,6 +93,10 @@ class VAE(BaseAutoEncoder):
             Z_tensor = torch.FloatTensor(Z).to(self.device)
             decoded = self.model.decode(Z_tensor)
         return decoded.cpu().numpy()
+
+    def reconstruct(self, X: np.ndarray) -> np.ndarray:
+        """Encode and then decode the data"""
+        return self.decode(self.encode(X))
 
 
 def loss_function(recon_x, x, mu, logvar):
