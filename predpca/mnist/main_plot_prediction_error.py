@@ -76,7 +76,7 @@ def main(
     print("compute maximum likelihood estimator")
     print("compute maximum likelihood estimator")
     predpca = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
-    se_train = predpca.fit_transform(s_train)
+    se_train = predpca.fit_transform(s_train, s_train)
 
     # true states and parameters
     print("compute true states and parameters")
@@ -138,7 +138,7 @@ def main(
 
         # PredPCA
         predpca_sub = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
-        se_sub = predpca_sub.fit_transform(s_sub)  # input expectations (Ns, T_sub)
+        se_sub = predpca_sub.fit_transform(s_sub, s_sub)  # input expectations (Ns, T_sub)
         se_test = predpca_sub.transform(s_test)  # input expectations (Ns, T_test)
 
         # eigenvalue decomposition

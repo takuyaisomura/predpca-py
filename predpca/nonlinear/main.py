@@ -39,7 +39,7 @@ def main(
     Nx = x_train.shape[0]
 
     predpca = PredPCA(kp_list=Kp_list, prior_s_=prior_s_)
-    qs_train = predpca.fit_transform(s_train)  # (Ns, T_train)
+    qs_train = predpca.fit_transform(s_train, s_train)  # (Ns, T_train)
     qs_test = predpca.transform(s_test)  # (Ns, T_test)
 
     pca = PCA(n_components=Npsi).fit(qs_train.T)

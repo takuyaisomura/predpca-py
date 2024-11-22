@@ -76,7 +76,7 @@ def main(
     print("PredPCA")
     print("- compute maximum likelihood estimator")
     predpca = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
-    se_train = predpca.fit_transform(s_train)  # (Ns, T_train)
+    se_train = predpca.fit_transform(s_train, s_train)  # (Ns, T_train)
     se_test = predpca.transform(s_test)  # (Ns, T_test)
 
     print("- post-hoc PCA using eigenvalue decomposition")
