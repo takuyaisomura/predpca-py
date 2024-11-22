@@ -6,10 +6,12 @@ dependencies = [
     "scipy",
     "matplotlib",
     "scikit-learn",
-    "moviepy",      # need ffmpeg
+    "ffmpeg-python",
+    "moviepy",       # need ffmpeg
     "scikit-image",
     "torch",
     "torchvision",
+    "tqdm",
 ]
 
 [build-system]
