@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 
 from predpca.aloi.predpca_utils import predict_encoding, prediction_error, preproc_data
 from predpca.aloi.visualize import plot_hidden_state, plot_test_images, plot_true_and_pred_video
-from predpca.predpca import compute_Q, create_basis_functions_multi_seq, predict_input, predict_input_pca
+from predpca.predpca import PredPCA
 
 start_time = time.time()
 
@@ -67,8 +67,6 @@ def main(
         "em": np.zeros((Kf, Ns, NT)),  # PredPCA empirical
         "em_opt": np.zeros((Kf, Ns, NT)),  # PredPCA empirical (optimal)
     }
-    s_train_, s_test_ = create_basis_functions_multi_seq(s_train, s_test, Kp_list)
-    # s_train_: (Ns*Kp, T_train), s_test_: (Ns*Kp, T_test)
 
     _, n_seq_train, seq_len = s_train.shape
     for h in range(NT):
@@ -76,14 +74,15 @@ def main(
         T_sub = n_seq_sub * seq_len  # number of training samples
         print(f"training with T = {T_sub} (time = {(time.time() - start_time) / 60:.1f} min)")
 
-        print("compute PredPCA with plain bases")
         s_sub = s_train[:, :n_seq_sub]
-        s_sub_ = s_train_[:, :T_sub]
         s_target_sub = s_target_train[:, :, :T_sub]
 
+        print("compute PredPCA with plain bases")
+        predpca = PredPCA(kp_list=Kp_list, prior_s_=prior_s_)
         pred_err_em, se_sub, _, W_pca_post = run_with_limited_samples(
-            s_sub_,
-            s_test_,
+            predpca,
+            s_sub,
+            s_test,
             s_target_sub,
             s_target_test,
             Nu_list[h],
@@ -94,12 +93,12 @@ def main(
 
         print("compute PredPCA with optimal bases")
         # optimal basis functions
-        Gain = qA.T @ linalg.inv(qSigmao)  # optimal gain; (Nu, Ns)
-        s_opt_sub_, s_opt_test_ = create_basis_functions_multi_seq(s_sub, s_test, Kp2_list, gain=Gain)
-        # maximum likelihood estimation
-        pred_err_em_opt, se_sub, se_test, W_pca_post_opt = run_with_limited_samples_opt(
-            s_opt_sub_,
-            s_opt_test_,
+        gain = qA.T @ linalg.inv(qSigmao)  # optimal gain; (Nu, Ns)
+        predpca_opt = PredPCA(kp_list=Kp2_list, prior_s_=prior_so_, gain=gain)
+        pred_err_em_opt, se_sub, se_test, W_pca_post_opt = run_with_limited_samples(
+            predpca_opt,
+            s_sub,
+            s_test,
             s_target_sub,
             s_target_test,
             Nu_list[h],
@@ -160,24 +159,23 @@ def main(
 
 
 def run_with_limited_samples(
-    s_sub_,  # (Ns*Kp, T_sub)
-    s_test_,  # (Ns*Kp, T_test)
+    predpca,
+    s_sub,  # (Ns, n_seq, seq_len)
+    s_test,  # (Ns, n_seq, seq_len)
     s_target_sub,  # (Kf, Ns, T_sub)
     s_target_test,  # (Kf, Ns, T_test)
     Nu,  # int
 ):
-    # maximum likelihood estimation
-    Q = compute_Q(s_sub_, s_target_sub, prior_s_=prior_s_)  # (Kf, Ns, Ns*Kp)
-    se_sub = predict_input(Q, s_sub_)  # (Kf, Ns, T_sub)
-    se_test = predict_input(Q, s_test_)  # (Kf, Ns, T_test)
+    se_sub = predpca.fit_transform(s_sub, s_target_sub)  # (Kf, Ns, T_sub)
+    se_test = predpca.transform(s_test)  # (Kf, Ns, T_test)
 
-    C = predict_input_pca(se_sub)[0]  # (Ns, Ns)
-    W_pca_post = C[:, :Nu].T  # optimal weights = transpose of eigenvectors (Nu, Ns)
+    C = predpca.predict_input_pca(se_sub)[0]  # (Ns, Ns)
+    W_pca_post_opt = C[:, :Nu].T  # optimal weights = transpose of eigenvectors (Nu, Ns)
 
     # test prediction error
-    pred_err_em = prediction_error(s_target_test, se_test, C)  # (Kf, Ns)
+    pred_err_em_opt = prediction_error(s_target_test, se_test, C)  # (Kf, Ns)
 
-    return pred_err_em, se_sub, se_test, W_pca_post
+    return pred_err_em_opt, se_sub, se_test, W_pca_post_opt
 
 
 def identify_system_param(
@@ -207,26 +205,6 @@ def identify_system_param(
     qSigmao = U @ S @ U.T  # correction; (Ns, Ns)
 
     return qA, qSigmao
-
-
-def run_with_limited_samples_opt(
-    s_sub_,  # (Ns*Kp, T_sub)
-    s_test_,  # (Ns*Kp, T_test)
-    s_target_sub,  # (Kf, Ns, T_sub)
-    s_target_test,  # (Kf, Ns, T_test)
-    Nu,  # int
-):
-    Q = compute_Q(s_sub_, s_target_sub, prior_s_=prior_so_)  # (Kf, Ns, Nu*Kp2)
-    se_sub = predict_input(Q, s_sub_)  # (Kf, Ns, T_sub)
-    se_test = predict_input(Q, s_test_)  # (Kf, Ns, T_test)
-
-    C = predict_input_pca(se_sub)[0]  # (Ns, Ns)
-    W_pca_post_opt = C[:, :Nu].T  # optimal weights = transpose of eigenvectors (Nu, Ns)
-
-    # test prediction error
-    pred_err_em_opt = prediction_error(s_target_test, se_test, C)  # (Kf, Ns)
-
-    return pred_err_em_opt, se_sub, se_test, W_pca_post_opt
 
 
 def save_error(
