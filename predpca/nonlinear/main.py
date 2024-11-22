@@ -5,9 +5,9 @@ import numpy as np
 from scipy import linalg
 from sklearn.decomposition import PCA
 
+from predpca.models.predpca.model import PredPCA
 from predpca.nonlinear.canonical_nonlinear_system import canonical_nonlinear_system
 from predpca.nonlinear.lorenz_attractor import lorenz_attractor
-from predpca.predpca import PredPCA
 from predpca.utils.pcacov import pcacov
 
 T_train = 100000
