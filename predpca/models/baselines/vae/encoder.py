@@ -47,8 +47,7 @@ class VAE(BaseEncoder):
         loader = DataLoader(
             dataset,
             batch_size=self.batch_size,
-            shuffle=True,
-            drop_last=True,
+            shuffle=False,  # We don't shuffle because the data is in sequence
             num_workers=1 if torch.cuda.is_available() else 0,
             pin_memory=torch.cuda.is_available(),
         )
