@@ -24,7 +24,7 @@ class BaseEncoder(ABC):
         pass
 
     @abstractmethod
-    def encode(self, X: np.ndarray) -> np.ndarray:
+    def transform(self, X: np.ndarray) -> np.ndarray:
         """Encode the data to latent space
 
         Args:
@@ -33,3 +33,18 @@ class BaseEncoder(ABC):
             encodings: (n_samples, n_latent_dim)
         """
         pass
+
+    @abstractmethod
+    def inverse_transform(self, Z: np.ndarray) -> np.ndarray:
+        """Decode the data from latent space
+
+        Args:
+            Z: Latent space representation (n_samples, n_latent_dim)
+        Returns:
+            X: (n_samples, n_features)
+        """
+        pass
+
+    def reconstruct(self, X: np.ndarray) -> np.ndarray:
+        """Encode and then decode the data"""
+        return self.inverse_transform(self.transform(X))

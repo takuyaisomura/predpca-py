@@ -52,7 +52,7 @@ class PredPCAEncoder(BaseEncoder):
         self.pca_postprocess.fit(s_pred.T)
         return self
 
-    def encode(self, X: np.ndarray) -> np.ndarray:
+    def transform(self, X: np.ndarray) -> np.ndarray:
         """Encode data to latent space using PCA on predicted covariance
 
         Args:
@@ -64,3 +64,16 @@ class PredPCAEncoder(BaseEncoder):
         s_pred = self.model.transform(s)  # (Ns, n_samples)
         u = self.pca_postprocess.transform(s_pred.T)  # (n_samples, latent_dim)
         return u
+
+    def inverse_transform(self, u: np.ndarray) -> np.ndarray:
+        """Decode latent representations back to input space
+
+        Args:
+            u: Latent representations (n_samples, latent_dim)
+        Returns:
+            X: Reconstructed data (n_samples, input_dim)
+        """
+        s_pred = self.pca_postprocess.inverse_transform(u).T  # (Ns, n_samples)
+        s = self.model.inverse_transform(s_pred)  # (Ns, n_samples)
+        X = self.pca_preprocess.inverse_transform(s.T)  # (n_samples, input_dim)
+        return X

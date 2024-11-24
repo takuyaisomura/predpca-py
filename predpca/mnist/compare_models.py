@@ -36,7 +36,6 @@ def compare_models(
     train_size: int = 100000,
     test_size: int = 100000,
 ):
-
     # Prepare data
     input_train, input_test, _, _, label_test, _ = create_digit_sequence(
         data_dir,
@@ -83,14 +82,14 @@ def evaluate_encoder(
     Returns:
         Dictionary of metric names to values
     """
-    input_mean = input_train.mean(axis=0, keepdims=True)
-    input_train -= input_mean
-    input_test -= input_mean
+    input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
+    input_train_centered = input_train - input_mean
+    input_test_centered = input_test - input_mean
 
     # encode
-    encoder.fit(input_train)
-    train_encodings = encoder.encode(input_train)
-    test_encodings = encoder.encode(input_test)
+    encoder.fit(input_train_centered)
+    train_encodings = encoder.transform(input_train_centered)
+    test_encodings = encoder.transform(input_test_centered)
 
     # ICA
     ica = ICA(n_classes=10)
@@ -108,10 +107,14 @@ def evaluate_encoder(
     }
 
     # Visualize reconstructions
+    reconst_images = encoder.inverse_transform(test_encodings) + input_mean
+    visualize_reconstructions(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_reconstructions.png")
+
+    # Visualize predicted images
     decoder = Decoder(prior_u=prior_u, input_mean=input_mean)
-    decoder.fit(input_train, train_ica)
-    reconst_data = decoder.transform(pred_onehot)
-    visualize_reconstructions(input_test, reconst_data, out_dir / f"{encoder.name.lower()}_reconstructions.png")
+    decoder.fit(input_train_centered, train_ica)
+    pred_images = decoder.transform(pred_onehot) + input_mean
+    visualize_reconstructions(input_test, pred_images, out_dir / f"{encoder.name.lower()}_predictions.png")
 
     return metrics
 

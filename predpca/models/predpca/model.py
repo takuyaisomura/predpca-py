@@ -69,7 +69,7 @@ class PredPCA:
 
         s_ = np.zeros((enc_dim * Kp, n_seq * seq_len))
         for i, k in enumerate(self.kp_list):
-            s_[enc_dim * i : enc_dim * (i + 1), :] = np.roll(s, k, axis=-1).reshape(enc_dim, -1)
+            s_[enc_dim * i : enc_dim * (i + 1)] = np.roll(s, k, axis=-1).reshape(enc_dim, -1)
 
         return s_
 
@@ -119,6 +119,59 @@ class PredPCA:
         C, L, _ = pcacov(qSigmase_mean)  # C: (Ns, Ns), L: (Ns,)
 
         return C, L, qSigmase_mean
+
+    def inverse_transform(
+        self,
+        se: np.ndarray,  # (Kf, Ns, T) | (Ns, T)
+    ) -> np.ndarray:  # (Ns, T)
+        """Inverse transform from predicted states to basis functions and states
+
+        Args:
+            se: Predicted states
+        Returns:
+            s: Reconstructed states
+        """
+        se = _unsqueeze_kf(se)  # (Kf, Ns, T)
+        Kf = se.shape[0]
+
+        # Inverse Q transformation for each future step
+        s_list = []
+        for k in range(Kf):
+            Q_pinv = linalg.pinv(self.Q[k])  # (Ns*Kp, Ns)
+            s_ = Q_pinv @ se[k]  # (Ns*Kp, T)
+            s = self._inverse_create_basis_functions(s_)  # (Ns, T)
+            s_list.append(s)
+
+        # Average over future steps
+        s = np.mean(s_list, axis=0)  # (Ns, T)
+        return s
+
+    def _inverse_create_basis_functions(
+        self,
+        s_: np.ndarray,  # (Ns*Kp, T)
+    ) -> np.ndarray:  # (Ns, T)
+        """Inverse transform of basis functions
+
+        Args:
+            s_: Basis functions
+        Returns:
+            s: Reconstructed states
+        """
+        n_phi, T = s_.shape
+        enc_dim = n_phi // len(self.kp_list)
+
+        s_acc = np.zeros((enc_dim, T))
+        for i, k in enumerate(self.kp_list):
+            s_chunk = s_[enc_dim * i : enc_dim * (i + 1)]  # (enc_dim, T)
+            s_rolled = np.roll(s_chunk, -k, axis=-1)
+            s_acc += s_rolled
+        s = s_acc / len(self.kp_list)
+
+        if self.gain is not None:
+            gain_pinv = linalg.pinv(self.gain)  # (Ns, Nu)
+            s = gain_pinv @ s  # (Ns, T)
+
+        return s
 
 
 def _check_inputs(

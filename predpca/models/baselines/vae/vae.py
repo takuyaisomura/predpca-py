@@ -71,7 +71,7 @@ class VAE(BaseEncoder):
 
         return self
 
-    def encode(self, X: np.ndarray) -> np.ndarray:
+    def transform(self, X: np.ndarray) -> np.ndarray:
         """
         Transform input data to latent space
         Args:
@@ -86,17 +86,13 @@ class VAE(BaseEncoder):
 
         return mu.cpu().numpy()
 
-    def decode(self, Z: np.ndarray) -> np.ndarray:
+    def inverse_transform(self, Z: np.ndarray) -> np.ndarray:
         """Decode latent representations back to original space"""
         self.model.eval()
         with torch.no_grad():
             Z_tensor = torch.FloatTensor(Z).to(self.device)
             decoded = self.model.decode(Z_tensor)
         return decoded.cpu().numpy()
-
-    def reconstruct(self, X: np.ndarray) -> np.ndarray:
-        """Encode and then decode the data"""
-        return self.decode(self.encode(X))
 
 
 def loss_function(recon_x, x, mu, logvar):
