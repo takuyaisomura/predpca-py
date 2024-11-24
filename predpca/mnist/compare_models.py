@@ -6,7 +6,7 @@ from torchvision.utils import save_image
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.models.base_encoder import BaseEncoder
-from predpca.models.baselines.vae.vae import VAE
+from predpca.models.baselines.vae.encoder import VAE
 from predpca.models.decoder import Decoder
 from predpca.models.ica import ICA
 from predpca.models.predpca.encoder import PredPCAEncoder
