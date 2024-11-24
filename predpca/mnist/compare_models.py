@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import numpy as np
+import torch
+from torchvision.utils import save_image
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.models.base_encoder import BaseEncoder
@@ -10,18 +12,19 @@ from predpca.models.ica import ICA
 from predpca.models.predpca.encoder import PredPCAEncoder
 from predpca.models.wta_classifier import WTAClassifier
 
+sequence_type = 1
+prior_u = 1.0
+
 mnist_dir = Path(__file__).parent
 data_dir = mnist_dir / "data"
-out_dir = mnist_dir / "output" / "model_comparison"
-
-prior_u = 1.0
+out_dir = mnist_dir / "output" / "model_comparison" / f"sequence_type_{sequence_type}"
 
 np.random.seed(1000000)
 
 
 def main():
     out_dir.mkdir(parents=True, exist_ok=True)
-    results = compare_models(data_dir)
+    results = compare_models()
 
     # Display the results
     for model_name, metrics in results.items():
@@ -31,8 +34,6 @@ def main():
 
 
 def compare_models(
-    data_dir: Path,
-    sequence_type: int = 1,
     train_size: int = 100000,
     test_size: int = 100000,
 ):
@@ -106,27 +107,24 @@ def evaluate_encoder(
         "categorization_error": categorization_error,
     }
 
-    # Visualize reconstructions
+    # Visualize reconstructed images
     reconst_images = encoder.inverse_transform(test_encodings) + input_mean
-    visualize_reconstructions(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_reconstructions.png")
+    visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_reconstructions.png")
 
     # Visualize predicted images
     decoder = Decoder(prior_u=prior_u, input_mean=input_mean)
     decoder.fit(input_train_centered, train_ica)
     pred_images = decoder.transform(pred_onehot) + input_mean
-    visualize_reconstructions(input_test, pred_images, out_dir / f"{encoder.name.lower()}_predictions.png")
+    visualize_decodings(input_test, pred_images, out_dir / f"{encoder.name.lower()}_predictions.png")
 
     return metrics
 
 
-def visualize_reconstructions(
+def visualize_decodings(
     input_data: np.ndarray,
     reconst_data: np.ndarray,
     filename: str,
 ):
-    import torch
-    from torchvision.utils import save_image
-
     n_samples = 10
     comparison = np.concatenate(
         [
