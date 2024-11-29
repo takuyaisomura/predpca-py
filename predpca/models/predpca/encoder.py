@@ -10,21 +10,19 @@ from predpca.models.predpca.model import PredPCA
 class PredPCAEncoder(BaseEncoder):
     def __init__(
         self,
+        model: PredPCA,
         Ns: int,
         Nu: int,
-        kp_list: list[int] | range,
-        prior_s_: float,
-        gain: np.ndarray | None = None,
     ):
         """Initialize PredPCA AutoEncoder
 
         Args:
-            kp_list: List of time lags to use for prediction
-            prior_s_: Prior variance for regularization
-            gain: Optional gain matrix (Nu, Ns)
+            model: PredPCA model
+            Ns: Number of state variables
+            Nu: Number of latent variables
         """
         super().__init__()
-        self.model = PredPCA(kp_list=kp_list, prior_s_=prior_s_, gain=gain)
+        self.model = model
         self.Ns = Ns
         self.Nu = Nu
         self.pca_preprocess: PCA | None = None

@@ -13,6 +13,7 @@ from predpca.models.baselines.vae.model import VAEModel
 class VAE(BaseEncoder):
     def __init__(
         self,
+        model: VAEModel,
         epochs: int = 10,
         batch_size: int = 128,
         lr: float = 1e-3,
@@ -20,15 +21,16 @@ class VAE(BaseEncoder):
         """
         Initialize VAE evaluator
         Args:
-            latent_dim: Dimension of latent space
+            model: VAEModel
             epochs: Number of training epochs
             batch_size: Batch size for training
+            lr: Learning rate
         """
         super().__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = model.to(self.device)
         self.epochs = epochs
         self.batch_size = batch_size
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = VAEModel().to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
 
     @property

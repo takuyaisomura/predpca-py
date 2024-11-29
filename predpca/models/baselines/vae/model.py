@@ -6,9 +6,9 @@ from torch.nn import functional as F
 class VAEModel(nn.Module):
     def __init__(
         self,
-        input_dim=784,
-        hidden_dim=400,
-        latent_dim=10,  # should match n_classes
+        input_dim: int = 784,
+        hidden_dim: int = 400,
+        latent_dim: int = 10,  # should match n_classes
     ):
         super().__init__()
 

@@ -7,9 +7,11 @@ from torchvision.utils import save_image
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.models.base_encoder import BaseEncoder
 from predpca.models.baselines.vae.encoder import VAE
+from predpca.models.baselines.vae.model import VAEModel
 from predpca.models.decoder import Decoder
 from predpca.models.ica import ICA
 from predpca.models.predpca.encoder import PredPCAEncoder
+from predpca.models.predpca.model import PredPCA
 from predpca.models.wta_classifier import WTAClassifier
 
 sequence_type = 1
@@ -55,8 +57,22 @@ def compare_models(
 
     # Prepare encoders
     encoders = [
-        VAE(epochs=10),
-        PredPCAEncoder(Ns=40, Nu=10, kp_list=range(1, 41), prior_s_=100),
+        VAE(
+            model=VAEModel(
+                input_dim=784,
+                hidden_dim=400,
+                latent_dim=10,
+            ),
+            epochs=10,
+        ),
+        PredPCAEncoder(
+            model=PredPCA(
+                kp_list=range(1, 41),
+                prior_s_=100,
+            ),
+            Ns=40,
+            Nu=10,
+        ),
     ]
 
     # Evaluate encoders
