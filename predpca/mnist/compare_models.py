@@ -105,8 +105,8 @@ def evaluate_encoder(
 
     # encode
     encoder.fit(input_train_centered)
-    train_encodings = encoder.transform(input_train_centered)
-    test_encodings = encoder.transform(input_test_centered)
+    train_encodings = encoder.encode(input_train_centered)
+    test_encodings = encoder.encode(input_test_centered)
 
     # ICA
     ica = ICA(n_classes=10)
@@ -124,14 +124,9 @@ def evaluate_encoder(
     }
 
     # Visualize reconstructed images
-    reconst_images = encoder.inverse_transform(test_encodings) + input_mean
-    visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_reconstructions.png")
-
-    # Visualize predicted images
-    decoder = Decoder(prior_u=prior_u, input_mean=input_mean)
-    decoder.fit(input_train_centered, train_ica)
-    pred_images = decoder.transform(pred_onehot) + input_mean
-    visualize_decodings(input_test, pred_images, out_dir / f"{encoder.name.lower()}_predictions.png")
+    if hasattr(encoder, "decode"):
+        reconst_images = encoder.decode(test_encodings) + input_mean
+        visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_decodings.png")
 
     return metrics
 
