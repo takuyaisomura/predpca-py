@@ -6,23 +6,43 @@ from torch.nn import functional as F
 class VAEModel(nn.Module):
     def __init__(
         self,
-        input_dim: int = 784,
-        hidden_dim: int = 400,
-        latent_dim: int = 10,  # should match n_classes
+        units: list[int],
     ):
         super().__init__()
+        self._build(units)
 
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc21 = nn.Linear(hidden_dim, latent_dim)
-        self.fc22 = nn.Linear(hidden_dim, latent_dim)
-        self.fc3 = nn.Linear(latent_dim, hidden_dim)
-        self.fc4 = nn.Linear(hidden_dim, input_dim)
+    def _build(self, units: list[int]):
+        hidden_units = units[:-1]  # exclude latent dimension
+        latent_unit = units[-1]
+        reverse_units = units[::-1]
+        input_unit = units[0]
+
+        # encoder layers
+        encoder_layers = []
+        for unit_in, unit_out in zip(hidden_units[:-1], hidden_units[1:]):
+            encoder_layers.append(nn.Linear(unit_in, unit_out))
+            encoder_layers.append(nn.ReLU())
+        self.encoder = nn.Sequential(*encoder_layers)
+
+        # latent layers
+        self.fc_mu = nn.Linear(hidden_units[-1], latent_unit)
+        self.fc_var = nn.Linear(hidden_units[-1], latent_unit)
+
+        # decoder layers
+        decoder_layers = []
+        for unit_in, unit_out in zip(reverse_units[:-1], reverse_units[1:]):
+            decoder_layers.append(nn.Linear(unit_in, unit_out))
+            if unit_out != input_unit:
+                decoder_layers.append(nn.ReLU())
+            else:
+                decoder_layers.append(nn.Sigmoid())
+        self.decoder = nn.Sequential(*decoder_layers)
+
+        print(self)
 
     def encode(self, x):
-        h1 = F.relu(self.fc1(x))  # (n_samples, hidden_dim)
-        h21 = self.fc21(h1)  # (n_samples, latent_dim)
-        h22 = self.fc22(h1)  # (n_samples, latent_dim)
-        return h21, h22
+        h = self.encoder(x)
+        return self.fc_mu(h), self.fc_var(h)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)  # (n_samples, latent_dim)
@@ -30,14 +50,22 @@ class VAEModel(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
-        h3 = F.relu(self.fc3(z))  # (n_samples, hidden_dim)
-        h4 = torch.sigmoid(self.fc4(h3))  # (n_samples, input_dim)
-        return h4
+        return self.decoder(z)
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, 784))  # (n_samples, latent_dim)
-        z = self.reparameterize(mu, logvar)  # (n_samples, latent_dim)
-        return self.decode(z), mu, logvar
+        """Forward pass of the VAE model
+
+        Args:
+            x: Input data (n_samples, input_dim)
+        Returns:
+            reconst_x: Reconstructed data (n_samples, input_dim)
+            mu: Mean of the latent space (n_samples, latent_dim)
+            logvar: Log variance of the latent space (n_samples, latent_dim)
+        """
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        reconst_x = self.decode(z)
+        return reconst_x, mu, logvar
 
 
 def loss_function(recon_x, x, mu, logvar):

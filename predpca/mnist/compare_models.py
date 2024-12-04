@@ -62,19 +62,11 @@ def compare_models(
     # Prepare encoders
     encoders = [
         TAE(
-            model=TAEModel(
-                input_dim=784,
-                hidden_dim=400,
-                latent_dim=10,
-            ),
+            model=TAEModel(units=[784, 400, 200, 10]),
             epochs=10,
         ),
         VAE(
-            model=VAEModel(
-                input_dim=784,
-                hidden_dim=400,
-                latent_dim=10,
-            ),
+            model=VAEModel(units=[784, 400, 200, 10]),
             epochs=10,
         ),
         PredPCAEncoder(
