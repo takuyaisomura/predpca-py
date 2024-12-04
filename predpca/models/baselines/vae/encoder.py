@@ -37,14 +37,11 @@ class VAE(BaseEncoder):
     def name(self) -> str:
         return "VAE"
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> Self:
-        """
-        Train the VAE model
-        Args:
-            X: Input data (n_samples, n_features)
-            y: Target data (not used in unsupervised learning)
-        """
-        self.model.train()
+    def fit(
+        self,
+        X: np.ndarray,
+        X_val: np.ndarray | None = None,
+    ) -> Self:
         dataset = TensorDataset(torch.FloatTensor(X))
         loader = DataLoader(
             dataset,
@@ -53,9 +50,24 @@ class VAE(BaseEncoder):
             num_workers=1 if torch.cuda.is_available() else 0,
             pin_memory=torch.cuda.is_available(),
         )
+        self._train_steps = []
+        self._train_losses = []
 
+        if X_val is not None:
+            self.batch_size_val = len(X_val)
+            val_dataset = TensorDataset(torch.FloatTensor(X_val))
+            val_loader = DataLoader(
+                val_dataset,
+                batch_size=self.batch_size_val,
+                shuffle=False,
+            )
+            self._val_steps = []
+            self._val_losses = []
+
+        step = 0
         for epoch in range(1, self.epochs + 1):
-            train_loss = 0
+            self.model.train()
+
             for (data,) in tqdm(loader, desc=f"Epoch {epoch}", unit="batch"):
                 data = data.to(self.device)
                 self.optimizer.zero_grad()
@@ -64,11 +76,28 @@ class VAE(BaseEncoder):
                 loss = loss_function(reconst_batch, data, mu, logvar)
 
                 loss.backward()
-                train_loss += loss.item()
                 self.optimizer.step()
 
-            avg_loss = train_loss / len(loader.dataset)
+                self._train_steps.append(step)
+                self._train_losses.append(loss.item() / self.batch_size)
+
+                step += 1
+
+            avg_loss = np.mean(self._train_losses) / self.batch_size
             print(f"Epoch {epoch}: Average loss {avg_loss:.4f}")
+
+            if val_loader is None:
+                continue
+
+            self.model.eval()
+            with torch.no_grad():
+                for (data,) in val_loader:
+                    data = data.to(self.device)
+                    reconst_batch, mu, logvar = self.model(data)
+                    loss = loss_function(reconst_batch, data, mu, logvar)
+
+                    self._val_steps.append(step)
+                    self._val_losses.append(loss.item() / self.batch_size_val)
 
         return self
 
@@ -94,6 +123,14 @@ class VAE(BaseEncoder):
             Z_tensor = torch.FloatTensor(Z).to(self.device)
             decoded = self.model.decode(Z_tensor)
         return decoded.cpu().numpy()
+
+    @property
+    def train_losses(self) -> tuple[np.ndarray, np.ndarray]:
+        return self._train_steps, self._train_losses
+
+    @property
+    def val_losses(self) -> tuple[np.ndarray, np.ndarray]:
+        return self._val_steps, self._val_losses
 
 
 def loss_function(recon_x, x, mu, logvar):

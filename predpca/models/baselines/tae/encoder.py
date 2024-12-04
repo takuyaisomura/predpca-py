@@ -23,6 +23,7 @@ class TAE(BaseEncoder):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epochs = epochs
         self.batch_size = batch_size
+        self.batch_size_val: int | None = None
 
         self._tae = _TAE(
             encoder=model.encoder,
@@ -37,17 +38,31 @@ class TAE(BaseEncoder):
     def name(self) -> str:
         return "TAE"
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> Self:
-        dataset = TrajectoryDataset(lagtime=1, trajectory=X.astype(np.float32))
-        loader = DataLoader(
-            dataset,
+    def fit(
+        self,
+        X: np.ndarray,
+        X_val: np.ndarray | None = None,
+    ) -> Self:
+        train_dataset = TrajectoryDataset(lagtime=1, trajectory=X.astype(np.float32))
+        train_loader = DataLoader(
+            train_dataset,
             batch_size=self.batch_size,
             shuffle=True,  # We can shuffle because TrajectoryDataset has pairs of data and lagged data
             num_workers=1 if torch.cuda.is_available() else 0,
             pin_memory=torch.cuda.is_available(),
         )
 
-        self._tae.fit(loader, n_epochs=self.epochs)
+        val_loader = None
+        if X_val is not None:
+            self.batch_size_val = len(X_val)
+            val_dataset = TrajectoryDataset(lagtime=1, trajectory=X_val.astype(np.float32))
+            val_loader = DataLoader(
+                val_dataset,
+                batch_size=self.batch_size_val,
+                shuffle=False,
+            )
+
+        self._tae.fit(train_loader, n_epochs=self.epochs, validation_loader=val_loader)
         self._tae_model = self._tae.fetch_model()
         return self
 
@@ -59,3 +74,21 @@ class TAE(BaseEncoder):
         with torch.no_grad():
             reconst_images = self._tae_model.decoder(Z_tensor).cpu().numpy()
         return reconst_images
+
+    @property
+    def train_losses(self) -> tuple[np.ndarray, np.ndarray]:
+        if self._tae.train_losses.size == 0:
+            raise ValueError("No training losses found")
+
+        steps = self._tae.train_losses[:, 0]
+        values = self._tae.train_losses[:, 1] / self.batch_size
+        return steps, values
+
+    @property
+    def val_losses(self) -> tuple[np.ndarray, np.ndarray]:
+        if self._tae.validation_losses.size == 0:
+            raise ValueError("No validation losses found")
+
+        steps = self._tae.validation_losses[:, 0]
+        values = self._tae.validation_losses[:, 1] / self.batch_size_val
+        return steps, values

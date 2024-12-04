@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torchvision.utils import save_image
@@ -39,14 +40,15 @@ def main():
 def compare_models(
     train_size: int = 100000,
     test_size: int = 100000,
+    val_size: int = 10000,
 ):
     # Prepare data
-    input_train, input_test, _, _, label_test, _ = create_digit_sequence(
+    input_train, input_test, input_val, _, label_test, _ = create_digit_sequence(
         data_dir,
         sequence_type,
         train_size,
         test_size,
-        test_size,
+        val_size,
         train_randomness=True,
         test_randomness=False,
         train_signflip=True,
@@ -54,6 +56,7 @@ def compare_models(
     )
     input_train = input_train.T  # (n_samples, input_dim)
     input_test = input_test.T  # (n_samples, input_dim)
+    input_val = input_val.T  # (n_samples, input_dim)
     label_test = label_test.ravel()  # (n_samples,)
 
     # Prepare encoders
@@ -85,7 +88,9 @@ def compare_models(
     ]
 
     # Evaluate encoders
-    results = {encoder.name: evaluate_encoder(encoder, input_train, input_test, label_test) for encoder in encoders}
+    results = {
+        encoder.name: evaluate_encoder(encoder, input_train, input_test, input_val, label_test) for encoder in encoders
+    }
 
     return results
 
@@ -94,6 +99,7 @@ def evaluate_encoder(
     encoder: BaseEncoder,
     input_train: np.ndarray,
     input_test: np.ndarray,
+    input_val: np.ndarray,
     label_test: np.ndarray,
 ) -> dict[str, float]:
     """Evaluate a single encoder using specified classifier and metrics
@@ -111,9 +117,10 @@ def evaluate_encoder(
     input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
     input_train_centered = input_train - input_mean
     input_test_centered = input_test - input_mean
+    input_val_centered = input_val - input_mean
 
     # encode
-    encoder.fit(input_train_centered)
+    encoder.fit(input_train_centered, X_val=input_val_centered)
     train_encodings = encoder.encode(input_train_centered)
     test_encodings = encoder.encode(input_test_centered)
 
@@ -137,6 +144,14 @@ def evaluate_encoder(
         reconst_images = encoder.decode(test_encodings) + input_mean
         visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_decodings.png")
 
+    # Plot learning curves
+    if hasattr(encoder, "train_losses") and hasattr(encoder, "val_losses"):
+        train_steps, train_losses = encoder.train_losses
+        val_steps, val_losses = encoder.val_losses
+        fig = plot_losses(train_steps, train_losses, val_steps, val_losses)
+        fig.savefig(out_dir / f"{encoder.name.lower()}_losses.png")
+        plt.close(fig)
+
     return metrics
 
 
@@ -154,6 +169,20 @@ def visualize_decodings(
         axis=0,
     )
     save_image(torch.from_numpy(comparison), filename, nrow=n_samples)
+
+
+def plot_losses(
+    train_steps: np.ndarray,
+    train_losses: np.ndarray,
+    val_steps: np.ndarray,
+    val_losses: np.ndarray,
+):
+    fig = plt.figure()
+    plt.plot(train_steps, train_losses, label="Training Loss")
+    plt.plot(val_steps, val_losses, label="Validation Loss", marker="o")
+    plt.legend()
+    plt.xlabel("Step")
+    return fig
 
 
 if __name__ == "__main__":

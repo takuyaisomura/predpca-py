@@ -32,13 +32,11 @@ class PredPCAEncoder(BaseEncoder):
     def name(self) -> str:
         return "PredPCA"
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> Self:
-        """Train the model
-
-        Args:
-            X: Input data (n_samples, n_features)
-            y: Not used
-        """
+    def fit(
+        self,
+        X: np.ndarray,
+        X_val: np.ndarray | None = None,
+    ) -> Self:
         # preprocess
         self.pca_preprocess = PCA(n_components=self.Ns)
         s = self.pca_preprocess.fit_transform(X).T  # (Ns, n_samples)

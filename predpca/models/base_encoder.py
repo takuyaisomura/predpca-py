@@ -14,12 +14,16 @@ class BaseEncoder(ABC):
         pass
 
     @abstractmethod
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> Self:
+    def fit(
+        self,
+        X: np.ndarray,
+        X_val: np.ndarray | None = None,
+    ) -> Self:
         """Train the model
 
         Args:
             X: Input data (n_samples, n_features)
-            y: Target data (n_samples, n_features)
+            X_val: Validation data (n_samples, n_features)
         """
         pass
 
