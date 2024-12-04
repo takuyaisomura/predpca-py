@@ -10,7 +10,6 @@ from predpca.models.baselines.tae.encoder import TAE
 from predpca.models.baselines.tae.model import TAEModel
 from predpca.models.baselines.vae.encoder import VAE
 from predpca.models.baselines.vae.model import VAEModel
-from predpca.models.decoder import Decoder
 from predpca.models.ica import ICA
 from predpca.models.predpca.encoder import PredPCAEncoder
 from predpca.models.predpca.model import PredPCA
@@ -120,7 +119,7 @@ def evaluate_encoder(
 
     # ICA
     ica = ICA(n_classes=10)
-    train_ica = ica.fit_transform(train_encodings, test_encodings)
+    ica.fit(train_encodings, test_encodings)
     test_ica = ica.transform(test_encodings)
 
     # Classify
