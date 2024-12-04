@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -29,6 +30,10 @@ np.random.seed(1000000)
 def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     results = compare_models()
+
+    # save results
+    with open(out_dir / "results.json", "w") as f:
+        json.dump(results, f, indent=4)
 
     # Display the results
     for model_name, metrics in results.items():
