@@ -8,6 +8,8 @@ from torchvision.utils import save_image
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.models.base_encoder import BaseEncoder
+from predpca.models.baselines.ltae.encoder import LTAE
+from predpca.models.baselines.ltae.model import LTAEModel
 from predpca.models.baselines.tae.encoder import TAE
 from predpca.models.baselines.tae.model import TAEModel
 from predpca.models.baselines.vae.encoder import VAE
@@ -66,6 +68,9 @@ def compare_models(
 
     # Prepare encoders
     encoders = [
+        LTAE(
+            model=LTAEModel(n_components=10),
+        ),
         TAE(
             model=TAEModel(units=[784, 400, 200, 10]),
             epochs=10,
