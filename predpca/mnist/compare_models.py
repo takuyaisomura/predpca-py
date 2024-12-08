@@ -12,6 +12,7 @@ from predpca.models.baselines.ltae.encoder import LTAE
 from predpca.models.baselines.ltae.model import LTAEModel
 from predpca.models.baselines.tae.encoder import TAE
 from predpca.models.baselines.tae.model import TAEModel
+from predpca.models.baselines.tica.encoder import TICA
 from predpca.models.baselines.vae.encoder import VAE
 from predpca.models.baselines.vae.model import VAEModel
 from predpca.models.ica import ICA
@@ -68,6 +69,9 @@ def compare_models(
 
     # Prepare encoders
     encoders = [
+        TICA(
+            dim=10,
+        ),
         LTAE(
             model=LTAEModel(n_components=10),
         ),
