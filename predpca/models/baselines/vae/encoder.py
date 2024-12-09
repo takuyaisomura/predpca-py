@@ -86,7 +86,7 @@ class VAE(BaseEncoder):
             avg_loss = np.mean(self._train_losses) / self.batch_size
             print(f"Epoch {epoch}: Average loss {avg_loss:.4f}")
 
-            if val_loader is None:
+            if X_val is None:
                 continue
 
             self.model.eval()

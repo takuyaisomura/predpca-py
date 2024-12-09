@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 
 class VAEModel(nn.Module):
@@ -66,10 +65,3 @@ class VAEModel(nn.Module):
         z = self.reparameterize(mu, logvar)
         reconst_x = self.decode(z)
         return reconst_x, mu, logvar
-
-
-def loss_function(recon_x, x, mu, logvar):
-    """VAE loss function: reconstruction error + KL divergence"""
-    BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction="sum")
-    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    return BCE + KLD
