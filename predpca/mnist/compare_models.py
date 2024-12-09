@@ -69,20 +69,17 @@ def compare_models(
     input_val = input_val.T  # (n_samples, input_dim)
     label_test = label_test.ravel()  # (n_samples,)
 
+    is_2step = sequence_type == 2
+
     # Prepare encoders
-    encoders = [
-        TICA(
-            dim=10,
-        ),
-        LTAE(
-            model=LTAEModel(n_components=10),
-        ),
-        TAE(
-            model=TAEModel(units=[784, 400, 200, 10]),
+    input_dim = input_train.shape[1]
+    encoders_1step_input = [
+        VAE(
+            model=VAEModel(units=[input_dim, 200, 100, 10]),
             epochs=10,
         ),
-        VAE(
-            model=VAEModel(units=[784, 400, 200, 10]),
+        AE(
+            model=AEModel(units=[input_dim, 200, 100, 10]),
             epochs=10,
         ),
         PredPCAEncoder(
@@ -94,13 +91,60 @@ def compare_models(
             Nu=10,
         ),
     ]
+    input_dim = input_train.shape[1] * 2 if is_2step else input_train.shape[1]
+    encoders_2step_input = [
+        TAE(
+            model=TAEModel(units=[input_dim, 200, 100, 10]),
+            epochs=10,
+        ),
+        TICA(
+            dim=10,
+        ),
+        LTAE(
+            model=LTAEModel(n_components=10),
+        ),
+    ]
 
     # Evaluate encoders
-    results = {
-        encoder.name: evaluate_encoder(encoder, input_train, input_test, input_val, label_test) for encoder in encoders
-    }
+    results = {}
+    for encoder in encoders_1step_input:
+        results[encoder.name] = evaluate_encoder(encoder, input_train, input_test, input_val, label_test)
+
+    if is_2step:
+        input_train = create_2step_data(input_train)
+        input_test = create_2step_data(input_test)
+        input_val = create_2step_data(input_val)
+
+    for encoder in encoders_2step_input:
+        results[encoder.name] = evaluate_encoder(encoder, input_train, input_test, input_val, label_test)
 
     return results
+
+
+def create_2step_data(data: np.ndarray) -> np.ndarray:
+    """Create input data that includes both current and previous timesteps.
+
+    Args:
+        data: Input data of shape (n_samples, input_dim)
+
+    Returns:
+        Combined data of shape (n_samples, 2*input_dim) containing current and previous timesteps
+    """
+    prev_data = np.roll(data, 1, axis=0)
+    return np.concatenate([data, prev_data], axis=1)
+
+
+def extract_current_step_data(data: np.ndarray) -> np.ndarray:
+    """Extract current timestep data from combined two-step data.
+
+    Args:
+        data: Combined data of shape (n_samples, 2*input_dim)
+
+    Returns:
+        Current timestep data of shape (n_samples, input_dim)
+    """
+    input_dim = data.shape[1] // 2
+    return data[:, :input_dim]
 
 
 def evaluate_encoder(
@@ -122,6 +166,7 @@ def evaluate_encoder(
     Returns:
         Dictionary of metric names to values
     """
+    # Center the data
     input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
     input_train_centered = input_train - input_mean
     input_test_centered = input_test - input_mean
@@ -169,6 +214,12 @@ def visualize_decodings(
     filename: str,
 ):
     n_samples = 10
+
+    # For sequence_type 2, extract current timestep data
+    if sequence_type == 2:
+        input_data = extract_current_step_data(input_data)
+        reconst_data = extract_current_step_data(reconst_data)
+
     comparison = np.concatenate(
         [
             input_data[:n_samples].reshape(-1, 1, 28, 28),
