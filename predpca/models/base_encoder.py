@@ -17,13 +17,17 @@ class BaseEncoder(ABC):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
         """Train the model
 
         Args:
             X: Input data (n_samples, n_features)
+            X_target: Target data (n_samples, n_features)
             X_val: Validation data (n_samples, n_features)
+            X_target_val: Target data for validation (n_samples, n_features)
         """
         pass
 

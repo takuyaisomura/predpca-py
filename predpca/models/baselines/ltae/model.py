@@ -10,11 +10,12 @@ class LTAEModel:
         self.E: np.ndarray | None = None  # encoding matrix (n_features, n_components)
         self.D: np.ndarray | None = None  # decoding matrix (n_components, n_features)
 
-    def fit(self, X: np.ndarray) -> Self:
+    def fit(self, X: np.ndarray, X_target: np.ndarray) -> Self:
         """Fit the model to the data.
 
         Args:
             X: Input data of shape (n_samples, n_features)
+            X_target: Target data of shape (n_samples, n_features)
         """
         n_samples, _ = X.shape
 
@@ -28,8 +29,8 @@ class LTAEModel:
         Sigmas_sqrt = linalg.sqrtm(Sigmas).real  # (n_features, n_features)
 
         # compute encoding and decoding matrices
-        x = np.roll(X, 1, axis=0) @ Sigmas_inv_sqrt  # (n_samples, n_features)
-        y = X @ Sigmas_inv_sqrt  # (n_samples, n_features)
+        x = X @ Sigmas_inv_sqrt  # (n_samples, n_features)
+        y = X_target @ Sigmas_inv_sqrt  # (n_samples, n_features)
         K = x.T @ y / n_samples  # (n_features, n_features)
         U, s, Vh = linalg.svd(K, full_matrices=False)
         # U: (n_features, N)

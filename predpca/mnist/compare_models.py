@@ -73,7 +73,7 @@ def compare_models(
 
     # Prepare encoders
     input_dim = input_train.shape[1]
-    encoders_1step_input = [
+    encoders_nolag_target = [
         VAE(
             model=VAEModel(units=[input_dim, 200, 100, 10]),
             epochs=10,
@@ -92,7 +92,7 @@ def compare_models(
         ),
     ]
     input_dim = input_train.shape[1] * 2 if is_2step else input_train.shape[1]
-    encoders_2step_input = [
+    encoders_lagged_target = [
         TAE(
             model=TAEModel(units=[input_dim, 200, 100, 10]),
             epochs=10,
@@ -107,16 +107,27 @@ def compare_models(
 
     # Evaluate encoders
     results = {}
-    for encoder in encoders_1step_input:
-        results[encoder.name] = evaluate_encoder(encoder, input_train, input_test, input_val, label_test)
 
+    # encoders with no lagged target
+    target_train = input_train
+    target_val = input_val
+    for encoder in encoders_nolag_target:
+        results[encoder.name] = evaluate_encoder(
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test
+        )
+
+    # encoders with lagged target
     if is_2step:
         input_train = create_2step_data(input_train)
         input_test = create_2step_data(input_test)
         input_val = create_2step_data(input_val)
 
-    for encoder in encoders_2step_input:
-        results[encoder.name] = evaluate_encoder(encoder, input_train, input_test, input_val, label_test)
+    target_train = np.roll(input_train, -1, axis=0)
+    target_val = np.roll(input_val, -1, axis=0)
+    for encoder in encoders_lagged_target:
+        results[encoder.name] = evaluate_encoder(
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test
+        )
 
     return results
 
@@ -152,6 +163,8 @@ def evaluate_encoder(
     input_train: np.ndarray,
     input_test: np.ndarray,
     input_val: np.ndarray,
+    target_train: np.ndarray,
+    target_val: np.ndarray,
     label_test: np.ndarray,
 ) -> dict[str, float]:
     """Evaluate a single encoder using specified classifier and metrics
@@ -167,13 +180,21 @@ def evaluate_encoder(
         Dictionary of metric names to values
     """
     # Center the data
+    # TODO: compare_modelsでやる
     input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
     input_train_centered = input_train - input_mean
     input_test_centered = input_test - input_mean
     input_val_centered = input_val - input_mean
+    target_train_centered = target_train - input_mean  # TODO: 先にcentrizeしてからtargetを作る?
+    target_val_centered = target_val - input_mean
 
     # encode
-    encoder.fit(input_train_centered, X_val=input_val_centered)
+    encoder.fit(
+        X=input_train_centered,
+        X_target=target_train_centered,
+        X_val=input_val_centered,
+        X_target_val=target_val_centered,
+    )
     train_encodings = encoder.encode(input_train_centered)
     test_encodings = encoder.encode(input_test_centered)
 

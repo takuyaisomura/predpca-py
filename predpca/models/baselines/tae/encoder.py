@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from deeptime.decomposition.deep import TAE as _TAE
 from deeptime.decomposition.deep import TAEModel as _TAEModel
-from deeptime.util.data import TrajectoryDataset
+from deeptime.util.data import TimeLaggedDataset
 from torch.utils.data import DataLoader
 
 from predpca.models.base_encoder import BaseEncoder
@@ -41,9 +41,11 @@ class TAE(BaseEncoder):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
-        train_dataset = TrajectoryDataset(lagtime=1, trajectory=X.astype(np.float32))
+        train_dataset = TimeLaggedDataset(X, X_target).astype(np.float32)
         train_loader = DataLoader(
             train_dataset,
             batch_size=self.batch_size,
@@ -53,9 +55,9 @@ class TAE(BaseEncoder):
         )
 
         val_loader = None
-        if X_val is not None:
+        if X_val is not None and X_target_val is not None:
             self.batch_size_val = len(X_val)
-            val_dataset = TrajectoryDataset(lagtime=1, trajectory=X_val.astype(np.float32))
+            val_dataset = TimeLaggedDataset(X_val, X_target_val).astype(np.float32)
             val_loader = DataLoader(
                 val_dataset,
                 batch_size=self.batch_size_val,

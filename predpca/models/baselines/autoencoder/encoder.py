@@ -40,9 +40,11 @@ class AE(BaseEncoder):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
-        dataset = TensorDataset(torch.FloatTensor(X))
+        dataset = TensorDataset(torch.FloatTensor(X), torch.FloatTensor(X_target))
         loader = DataLoader(
             dataset,
             batch_size=self.batch_size,
@@ -55,7 +57,7 @@ class AE(BaseEncoder):
 
         if X_val is not None:
             self.batch_size_val = len(X_val)
-            val_dataset = TensorDataset(torch.FloatTensor(X_val))
+            val_dataset = TensorDataset(torch.FloatTensor(X_val), torch.FloatTensor(X_target_val))
             val_loader = DataLoader(
                 val_dataset,
                 batch_size=self.batch_size_val,
@@ -68,12 +70,13 @@ class AE(BaseEncoder):
         for epoch in range(1, self.epochs + 1):
             self.model.train()
 
-            for (data,) in tqdm(loader, desc=f"Epoch {epoch}", unit="batch"):
+            for data, target in tqdm(loader, desc=f"Epoch {epoch}", unit="batch"):
                 data = data.to(self.device)
+                target = target.to(self.device)
                 self.optimizer.zero_grad()
 
                 reconst_batch, _ = self.model(data)
-                loss = loss_function(reconst_batch, data)
+                loss = loss_function(reconst_batch, target)
 
                 loss.backward()
                 self.optimizer.step()
@@ -91,10 +94,11 @@ class AE(BaseEncoder):
 
             self.model.eval()
             with torch.no_grad():
-                for (data,) in val_loader:
+                for data, target in val_loader:
                     data = data.to(self.device)
+                    target = target.to(self.device)
                     reconst_batch, _ = self.model(data)
-                    loss = loss_function(reconst_batch, data)
+                    loss = loss_function(reconst_batch, target)
 
                     self._val_steps.append(step)
                     self._val_losses.append(loss.item() / self.batch_size_val)

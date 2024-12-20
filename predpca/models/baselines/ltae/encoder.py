@@ -21,9 +21,11 @@ class LTAE(BaseEncoder):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
-        self.model.fit(X)
+        self.model.fit(X, X_target)
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:

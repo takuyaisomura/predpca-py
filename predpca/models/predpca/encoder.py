@@ -7,12 +7,28 @@ from predpca.models.base_encoder import BaseEncoder
 from predpca.models.predpca.model import PredPCA
 
 
+class IdentityProcessor:
+    def fit(self, X: np.ndarray) -> Self:
+        return self
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        return X
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        return X
+
+    def inverse_transform(self, X: np.ndarray) -> np.ndarray:
+        return X
+
+
 class PredPCAEncoder(BaseEncoder):
     def __init__(
         self,
         model: PredPCA,
         Ns: int,
         Nu: int,
+        enable_preprocess: bool = True,
+        enable_postprocess: bool = True,
     ):
         """Initialize PredPCA AutoEncoder
 
@@ -20,13 +36,13 @@ class PredPCAEncoder(BaseEncoder):
             model: PredPCA model
             Ns: Number of state variables
             Nu: Number of latent variables
+            enable_preprocess: Whether to enable preprocess PCA
+            enable_postprocess: Whether to enable postprocess PCA
         """
         super().__init__()
         self.model = model
-        self.Ns = Ns
-        self.Nu = Nu
-        self.pca_preprocess: PCA | None = None
-        self.pca_postprocess: PCA | None = None
+        self.preprocessor = PCA(n_components=Ns) if enable_preprocess else IdentityProcessor()
+        self.postprocessor = PCA(n_components=Nu) if enable_postprocess else IdentityProcessor()
 
     @property
     def name(self) -> str:
@@ -35,41 +51,22 @@ class PredPCAEncoder(BaseEncoder):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
-        # preprocess
-        self.pca_preprocess = PCA(n_components=self.Ns)
-        s = self.pca_preprocess.fit_transform(X).T  # (Ns, n_samples)
-
-        s_pred = self.model.fit_transform(s, s)  # (Ns, n_samples)
-
-        # postprocess
-        self.pca_postprocess = PCA(n_components=self.Nu)
-        self.pca_postprocess.fit(s_pred.T)
+        s = self.preprocessor.fit_transform(X)  # (n_samples, Ns)
+        s_target = self.preprocessor.transform(X_target)  # (n_samples, Ns)
+        s_pred = self.model.fit_transform(s.T, s_target.T).T  # (n_samples, Ns)
+        self.postprocessor.fit(s_pred)
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:
-        """Encode data to latent space using PCA on predicted covariance
-
-        Args:
-            X: Input data (n_samples, input_dim)
-        Returns:
-            u: Latent representations (n_samples, latent_dim)
-        """
-        s = self.pca_preprocess.transform(X).T  # (Ns, n_samples)
-        s_pred = self.model.transform(s)  # (Ns, n_samples)
-        u = self.pca_postprocess.transform(s_pred.T)  # (n_samples, latent_dim)
-        return u
+        s = self.preprocessor.transform(X)  # (n_samples, Ns)
+        s_pred = self.model.transform(s.T).T  # (n_samples, Ns)
+        return self.postprocessor.transform(s_pred)  # (n_samples, Nu)
 
     def decode(self, u: np.ndarray) -> np.ndarray:
-        """Decode latent representations back to input space
-
-        Args:
-            u: Latent representations (n_samples, latent_dim)
-        Returns:
-            X: Reconstructed data (n_samples, input_dim)
-        """
-        s_pred = self.pca_postprocess.inverse_transform(u).T  # (Ns, n_samples)
-        s = self.model.inverse_transform(s_pred)  # (Ns, n_samples)
-        X = self.pca_preprocess.inverse_transform(s.T)  # (n_samples, input_dim)
-        return X
+        s_pred = self.postprocessor.inverse_transform(u)  # (n_samples, Ns)
+        s = self.model.inverse_transform(s_pred.T).T  # (n_samples, Ns)
+        return self.preprocessor.inverse_transform(s)  # (n_samples, n_features)

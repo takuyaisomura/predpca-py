@@ -28,9 +28,11 @@ class TICA(BaseEncoder):
     def fit(
         self,
         X: np.ndarray,
+        X_target: np.ndarray | None = None,
         X_val: np.ndarray | None = None,
+        X_target_val: np.ndarray | None = None,
     ) -> Self:
-        self._tica_model = self._tica.fit(X).fetch_model()
+        self._tica_model = self._tica.fit((X, X_target)).fetch_model()
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:
