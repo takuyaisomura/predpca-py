@@ -52,29 +52,7 @@ def compare_models(
     test_size: int = 100000,
     val_size: int = 10000,
 ):
-    # Prepare data
-    input_train, input_test, input_val, _, label_test, _ = create_digit_sequence(
-        data_dir,
-        sequence_type,
-        train_size,
-        test_size,
-        val_size,
-        train_randomness=True,
-        test_randomness=False,
-        train_signflip=True,
-        test_signflip=False,
-    )
-    input_train = input_train.T  # (n_samples, input_dim)
-    input_test = input_test.T  # (n_samples, input_dim)
-    input_val = input_val.T  # (n_samples, input_dim)
-    label_test = label_test.ravel()  # (n_samples,)
-
-    # Center the data
-    input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
-    input_train = input_train - input_mean
-    input_test = input_test - input_mean
-    input_val = input_val - input_mean
-
+    input_train, input_test, input_val, label_test, input_mean = prepare_data(train_size, test_size, val_size)
     is_2step = sequence_type == 2
 
     # Prepare encoders
@@ -136,6 +114,32 @@ def compare_models(
         )
 
     return results
+
+
+def prepare_data(train_size: int, test_size: int, val_size: int) -> np.ndarray:
+    input_train, input_test, input_val, _, label_test, _ = create_digit_sequence(
+        data_dir,
+        sequence_type,
+        train_size,
+        test_size,
+        val_size,
+        train_randomness=True,
+        test_randomness=False,
+        train_signflip=True,
+        test_signflip=False,
+    )
+    input_train = input_train.T  # (n_samples, input_dim)
+    input_test = input_test.T  # (n_samples, input_dim)
+    input_val = input_val.T  # (n_samples, input_dim)
+    label_test = label_test.ravel()  # (n_samples,)
+
+    # Center the data
+    input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
+    input_train = input_train - input_mean
+    input_test = input_test - input_mean
+    input_val = input_val - input_mean
+
+    return input_train, input_test, input_val, label_test, input_mean
 
 
 def create_2step_data(data: np.ndarray) -> np.ndarray:
