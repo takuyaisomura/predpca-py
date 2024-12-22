@@ -69,6 +69,12 @@ def compare_models(
     input_val = input_val.T  # (n_samples, input_dim)
     label_test = label_test.ravel()  # (n_samples,)
 
+    # Center the data
+    input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
+    input_train = input_train - input_mean
+    input_test = input_test - input_mean
+    input_val = input_val - input_mean
+
     is_2step = sequence_type == 2
 
     # Prepare encoders
@@ -113,7 +119,7 @@ def compare_models(
     target_val = input_val
     for encoder in encoders_nolag_target:
         results[encoder.name] = evaluate_encoder(
-            encoder, input_train, input_test, input_val, target_train, target_val, label_test
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean
         )
 
     # encoders with lagged target
@@ -126,7 +132,7 @@ def compare_models(
     target_val = np.roll(input_val, -1, axis=0)
     for encoder in encoders_lagged_target:
         results[encoder.name] = evaluate_encoder(
-            encoder, input_train, input_test, input_val, target_train, target_val, label_test
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean
         )
 
     return results
@@ -166,6 +172,7 @@ def evaluate_encoder(
     target_train: np.ndarray,
     target_val: np.ndarray,
     label_test: np.ndarray,
+    input_mean: np.ndarray,
 ) -> dict[str, float]:
     """Evaluate a single encoder using specified classifier and metrics
 
@@ -173,30 +180,24 @@ def evaluate_encoder(
         encoder: Model instance to evaluate
         input_train: Training data (n_samples, input_dim)
         input_test: Test data (n_samples, input_dim)
+        input_val: Validation data (n_samples, input_dim)
+        target_train: Training target data (n_samples, input_dim)
+        target_val: Validation target data (n_samples, input_dim)
         label_test: Test labels (n_samples,)
-        classifier: Classifier to use for evaluation. If None, uses ICAWTAClassifier
+        input_mean: Mean of input data for reconstruction (1, input_dim)
 
     Returns:
         Dictionary of metric names to values
     """
-    # Center the data
-    # TODO: compare_modelsでやる
-    input_mean = input_train.mean(axis=0, keepdims=True)  # (1, input_dim)
-    input_train_centered = input_train - input_mean
-    input_test_centered = input_test - input_mean
-    input_val_centered = input_val - input_mean
-    target_train_centered = target_train - input_mean  # TODO: 先にcentrizeしてからtargetを作る?
-    target_val_centered = target_val - input_mean
-
     # encode
     encoder.fit(
-        X=input_train_centered,
-        X_target=target_train_centered,
-        X_val=input_val_centered,
-        X_target_val=target_val_centered,
+        X=input_train,
+        X_target=target_train,
+        X_val=input_val,
+        X_target_val=target_val,
     )
-    train_encodings = encoder.encode(input_train_centered)
-    test_encodings = encoder.encode(input_test_centered)
+    train_encodings = encoder.encode(input_train)
+    test_encodings = encoder.encode(input_test)
 
     # ICA
     ica = ICA(n_classes=10)
