@@ -16,6 +16,14 @@
             "program": "${workspaceFolder}/predpca/mnist/compare_models.py",
             "console": "integratedTerminal",
             "justMyCode": false,
+        },
+        {
+            "name": "aloi/compare_models",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predpca/aloi/compare_models.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
     ]
 }

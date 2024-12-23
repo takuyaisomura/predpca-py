@@ -25,8 +25,8 @@ class PredPCAEncoder(BaseEncoder):
     def __init__(
         self,
         model: PredPCA,
-        Ns: int,
-        Nu: int,
+        Ns: int | None = None,
+        Nu: int | None = None,
         enable_preprocess: bool = True,
         enable_postprocess: bool = True,
     ):
@@ -41,8 +41,20 @@ class PredPCAEncoder(BaseEncoder):
         """
         super().__init__()
         self.model = model
-        self.preprocessor = PCA(n_components=Ns) if enable_preprocess else IdentityProcessor()
-        self.postprocessor = PCA(n_components=Nu) if enable_postprocess else IdentityProcessor()
+
+        if enable_preprocess:
+            if Ns is None:
+                raise ValueError("Ns must be provided if enable_preprocess is True")
+            self.preprocessor = PCA(n_components=Ns)
+        else:
+            self.preprocessor = IdentityProcessor()
+
+        if enable_postprocess:
+            if Nu is None:
+                raise ValueError("Nu must be provided if enable_postprocess is True")
+            self.postprocessor = PCA(n_components=Nu)
+        else:
+            self.postprocessor = IdentityProcessor()
 
     @property
     def name(self) -> str:
@@ -55,18 +67,29 @@ class PredPCAEncoder(BaseEncoder):
         X_val: np.ndarray | None = None,
         X_target_val: np.ndarray | None = None,
     ) -> Self:
-        s = self.preprocessor.fit_transform(X)  # (n_samples, Ns)
+        s = self.preprocessor.fit_transform(X)
         s_target = self.preprocessor.transform(X_target)  # (n_samples, Ns)
-        s_pred = self.model.fit_transform(s.T, s_target.T).T  # (n_samples, Ns)
+        if X.ndim == 2:  # (n_samples, Ns)
+            s_pred = self.model.fit_transform(s.T, s_target.T).T  # (n_samples, Ns)
+        else:  # (Ns, n_seq, seq_len)
+            s_pred = self.model.fit_transform(s, s_target.T).T  # (n_samples, Ns)
         self.postprocessor.fit(s_pred)
+
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:
         s = self.preprocessor.transform(X)  # (n_samples, Ns)
-        s_pred = self.model.transform(s.T).T  # (n_samples, Ns)
+        if X.ndim == 2:  # (n_samples, Ns)
+            s_pred = self.model.transform(s.T).T  # (n_samples, Ns)
+        else:  # (Ns, n_seq, seq_len)
+            s_pred = self.model.transform(s).T  # (n_samples, Ns)
         return self.postprocessor.transform(s_pred)  # (n_samples, Nu)
 
     def decode(self, u: np.ndarray) -> np.ndarray:
+        # TODO
+        # s_pred = self.postprocessor.inverse_transform(u)  # (n_samples, Ns)
+        # s = self.model.inverse_transform(s_pred.T).T  # (n_samples, Ns)
+        # return self.preprocessor.inverse_transform(s)  # (n_samples, n_features)
+
         s_pred = self.postprocessor.inverse_transform(u)  # (n_samples, Ns)
-        s = self.model.inverse_transform(s_pred.T).T  # (n_samples, Ns)
-        return self.preprocessor.inverse_transform(s)  # (n_samples, n_features)
+        return s_pred
