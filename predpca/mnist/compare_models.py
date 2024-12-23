@@ -23,7 +23,9 @@ from predpca.models.predpca.model import PredPCA
 from predpca.models.wta_classifier import WTAClassifier
 
 sequence_type = 1
-prior_u = 1.0
+t_train = 100000
+t_test = 100000
+t_val = 10000
 
 mnist_dir = Path(__file__).parent
 data_dir = mnist_dir / "data"
@@ -34,7 +36,7 @@ np.random.seed(1000000)
 
 def main():
     out_dir.mkdir(parents=True, exist_ok=True)
-    results = compare_models()
+    results = compare_models(t_train, t_test, t_val)
 
     # save results
     with open(out_dir / "results.json", "w") as f:
@@ -47,12 +49,8 @@ def main():
             print(f"{metric_name}: {value}")
 
 
-def compare_models(
-    train_size: int = 100000,
-    test_size: int = 100000,
-    val_size: int = 10000,
-):
-    input_train, input_test, input_val, label_test, input_mean = prepare_data(train_size, test_size, val_size)
+def compare_models(t_train: int, t_test: int, t_val: int):
+    input_train, input_test, input_val, label_test, input_mean = prepare_data(t_train, t_test, t_val)
     is_2step = sequence_type == 2
 
     # Prepare encoders
@@ -69,7 +67,7 @@ def compare_models(
         PredPCAEncoder(
             model=PredPCA(
                 kp_list=range(1, 41),
-                prior_s_=100,
+                prior_s_=100.0,
             ),
             Ns=40,
             Nu=10,
@@ -116,13 +114,13 @@ def compare_models(
     return results
 
 
-def prepare_data(train_size: int, test_size: int, val_size: int) -> np.ndarray:
+def prepare_data(t_train: int, t_test: int, t_val: int) -> np.ndarray:
     input_train, input_test, input_val, _, label_test, _ = create_digit_sequence(
         data_dir,
         sequence_type,
-        train_size,
-        test_size,
-        val_size,
+        t_train,
+        t_test,
+        t_val,
         train_randomness=True,
         test_randomness=False,
         train_signflip=True,
@@ -194,12 +192,7 @@ def evaluate_encoder(
         Dictionary of metric names to values
     """
     # encode
-    encoder.fit(
-        X=input_train,
-        X_target=target_train,
-        X_val=input_val,
-        X_target_val=target_val,
-    )
+    encoder.fit(input_train, target_train, input_val, target_val)
     train_encodings = encoder.encode(input_train)
     test_encodings = encoder.encode(input_test)
 
