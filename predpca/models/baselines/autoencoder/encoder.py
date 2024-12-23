@@ -137,5 +137,5 @@ class AE(BaseEncoder):
 
 
 def loss_function(recon_x, x):
-    MSE = F.mse_loss(recon_x, x.view(-1, 784), reduction="sum")
+    MSE = F.mse_loss(recon_x, x, reduction="sum")
     return MSE
