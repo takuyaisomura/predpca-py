@@ -114,7 +114,7 @@ def compare_models(t_train: int, t_test: int, t_val: int):
     return results
 
 
-def prepare_data(t_train: int, t_test: int, t_val: int) -> np.ndarray:
+def prepare_data(t_train: int, t_test: int, t_val: int):
     input_train, input_test, input_val, _, label_test, _ = create_digit_sequence(
         data_dir,
         sequence_type,
@@ -230,7 +230,7 @@ def evaluate_encoder(
 def visualize_decodings(
     input_data: np.ndarray,
     reconst_data: np.ndarray,
-    filename: str,
+    filename: Path,
 ):
     n_samples = 10
 

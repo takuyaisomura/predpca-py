@@ -117,7 +117,7 @@ def prepare_data(
     t_test: int,
     kf: int,
     with_noise: bool = False,
-) -> np.ndarray:
+):
     npz = np.load(preproc_out_dir / "aloi_data.npz")
     data = npz["data"][:Ns, :].astype(float)
     s_train, s_test, s_target_train, s_target_test = preproc_data(data, t_train, t_test, [kf], with_noise)
@@ -178,7 +178,7 @@ def evaluate_encoder(
 def visualize_decodings(
     input_data: np.ndarray,
     reconst_data: np.ndarray,
-    filename: str,
+    filename: Path,
 ):
     n_samples = 10
     comparison = np.concatenate(
