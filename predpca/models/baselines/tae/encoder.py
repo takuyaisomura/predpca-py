@@ -69,7 +69,8 @@ class TAE(BaseEncoder):
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:
-        return self._tae_model.transform(X)
+        with torch.no_grad():
+            return self._tae_model.transform(X)
 
     def decode(self, Z: np.ndarray) -> np.ndarray:
         Z_tensor = torch.from_numpy(Z).to(self.device)
