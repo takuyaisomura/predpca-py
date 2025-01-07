@@ -86,10 +86,6 @@ class PredPCAEncoder(BaseEncoder):
         return self.postprocessor.transform(s_pred)  # (n_samples, Nu)
 
     def decode(self, u: np.ndarray) -> np.ndarray:
-        # TODO
-        # s_pred = self.postprocessor.inverse_transform(u)  # (n_samples, Ns)
-        # s = self.model.inverse_transform(s_pred.T).T  # (n_samples, Ns)
-        # return self.preprocessor.inverse_transform(s)  # (n_samples, n_features)
-
         s_pred = self.postprocessor.inverse_transform(u)  # (n_samples, Ns)
-        return s_pred
+        X_pred = self.preprocessor.inverse_transform(s_pred)  # (n_samples, n_features)
+        return X_pred
