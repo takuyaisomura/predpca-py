@@ -103,6 +103,7 @@ def compare_models(t_train: int, t_test: int, t_val: int):
         input_train = create_2step_data(input_train)
         input_test = create_2step_data(input_test)
         input_val = create_2step_data(input_val)
+        input_mean = create_2step_data(input_mean)
 
     target_train = np.roll(input_train, -1, axis=0)
     target_val = np.roll(input_val, -1, axis=0)
