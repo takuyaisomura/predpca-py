@@ -82,12 +82,12 @@ class VAE(BaseEncoder):
                 self.optimizer.step()
 
                 self._train_steps.append(step)
-                self._train_losses.append(loss.item() / self.batch_size)
+                self._train_losses.append(loss.item() / self.batch_size)  # average loss per sample
 
                 step += 1
 
-            avg_loss = np.mean(self._train_losses) / self.batch_size
-            print(f"Epoch {epoch}: Average loss {avg_loss:.4f}")
+            avg_train_loss = np.mean(self._train_losses) / len(loader)  # average loss per batch
+            print(f"Epoch {epoch}: Average loss per batch {avg_train_loss:.4f}")
 
             if X_val is None:
                 continue
