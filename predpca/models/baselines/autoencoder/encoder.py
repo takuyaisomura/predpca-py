@@ -69,6 +69,7 @@ class AE(BaseEncoder):
         step = 0
         for epoch in range(1, self.epochs + 1):
             self.model.train()
+            ep_train_losses = []
 
             for data, target in tqdm(loader, desc=f"Epoch {epoch}", unit="batch"):
                 data = data.to(self.device)
@@ -82,12 +83,13 @@ class AE(BaseEncoder):
                 self.optimizer.step()
 
                 self._train_steps.append(step)
-                self._train_losses.append(loss.item() / self.batch_size)  # average loss per sample
+                batch_loss = loss.item() / self.batch_size  # average loss per sample
+                ep_train_losses.append(batch_loss)
+                self._train_losses.append(batch_loss)
 
                 step += 1
 
-            avg_train_loss = np.mean(self._train_losses) / len(loader)  # average loss per batch
-            print(f"Epoch {epoch}: Average loss per batch {avg_train_loss:.4f}")
+            print(f"Epoch {epoch}: Average loss {np.mean(ep_train_losses):.4f}")
 
             if X_val is None:
                 continue
