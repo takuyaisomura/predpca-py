@@ -8,10 +8,12 @@ from torchvision.utils import save_image
 
 from predpca.aloi.predpca_utils import preproc_data
 from predpca.models.base_encoder import BaseEncoder
+from predpca.models.baselines.ae_predictor.encoder import PredAE
 from predpca.models.baselines.autoencoder.encoder import AE
 from predpca.models.baselines.autoencoder.model import AEModel
 from predpca.models.baselines.ltae.encoder import LTAE
 from predpca.models.baselines.ltae.model import LTAEModel
+from predpca.models.baselines.simple_nn.model import SimpleNN
 from predpca.models.baselines.tae.encoder import TAE
 from predpca.models.baselines.tae.model import TAEModel
 from predpca.models.baselines.tica.encoder import TICA
@@ -70,6 +72,9 @@ def compare_models(
             batch_size=128,
             epochs=10,
         ),
+    ]
+
+    encoders_lagged_target = [
         PredPCAEncoder(
             model=PredPCA(
                 kp_list=range(0, 37, 2),
@@ -78,9 +83,6 @@ def compare_models(
             enable_preprocess=False,
             enable_postprocess=False,
         ),
-    ]
-
-    encoders_lagged_target = [
         TAE(
             model=TAEModel(units=[Ns, 250, 200, Nu]),
             batch_size=128,
@@ -92,6 +94,22 @@ def compare_models(
         LTAE(
             model=LTAEModel(n_components=Nu),
         ),
+        PredAE(
+            base_ae=AE(
+                model=AEModel(units=[Ns, 250, 200, Nu]),
+                batch_size=128,
+                # batch_size=256,
+                # epochs=10,
+                epochs=30,
+                lr=1e-4,
+                # lr=1e-3,
+            ),
+            # predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=128),
+            predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=256),
+            predictor_epochs=10,
+            batch_size=128,
+            predictor_lr=1e-4,
+        ),
     ]
 
     # Evaluate encoders
@@ -99,14 +117,14 @@ def compare_models(
 
     # encoders with no lagged target
     for encoder in encoders_nolag_target:
+        results[encoder.name] = evaluate_encoder(encoder, s_train_flat, s_test_flat, s_train_flat, s_test_flat)
+
+    # encoders with lagged target
+    for encoder in encoders_lagged_target:
         if encoder.name == "PredPCA":
             results[encoder.name] = evaluate_encoder(encoder, s_train, s_test, s_target_train, s_target_test)
         else:
             results[encoder.name] = evaluate_encoder(encoder, s_train_flat, s_test_flat, s_target_train, s_target_test)
-
-    # encoders with lagged target
-    for encoder in encoders_lagged_target:
-        results[encoder.name] = evaluate_encoder(encoder, s_train_flat, s_test_flat, s_target_train, s_target_test)
 
     return results
 
@@ -165,12 +183,11 @@ def evaluate_encoder(
     # visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_decodings.png")
 
     # Plot learning curves
-    # if hasattr(encoder, "train_losses") and hasattr(encoder, "val_losses"):
-    #     train_steps, train_losses = encoder.train_losses
-    #     val_steps, val_losses = encoder.val_losses
-    #     fig = plot_losses(train_steps, train_losses, val_steps, val_losses)
-    #     fig.savefig(out_dir / f"{encoder.name.lower()}_losses.png")
-    #     plt.close(fig)
+    if hasattr(encoder, "train_losses"):
+        train_steps, train_losses = encoder.train_losses
+        fig = plot_losses(train_steps, train_losses)
+        fig.savefig(out_dir / f"{encoder.name.lower()}_losses.png")
+        plt.close(fig)
 
     return metrics
 
@@ -194,12 +211,13 @@ def visualize_decodings(
 def plot_losses(
     train_steps: np.ndarray,
     train_losses: np.ndarray,
-    val_steps: np.ndarray,
-    val_losses: np.ndarray,
+    val_steps: np.ndarray | None = None,
+    val_losses: np.ndarray | None = None,
 ):
     fig = plt.figure()
     plt.plot(train_steps, train_losses, label="Training Loss")
-    plt.plot(val_steps, val_losses, label="Validation Loss", marker="o")
+    if val_steps is not None and val_losses is not None:
+        plt.plot(val_steps, val_losses, label="Validation Loss", marker="o")
     plt.legend()
     plt.xlabel("Step")
     return fig
