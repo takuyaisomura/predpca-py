@@ -56,20 +56,12 @@ def compare_models(
     t_test: int,
     kf: int,
 ):
-    s_train, s_test, s_train_flat, s_test_flat, s_target_train, s_target_test = prepare_data(
-        preproc_out_dir, t_train, t_test, kf
-    )
+    s_train, s_test, s_target_train, s_target_test = prepare_data(preproc_out_dir, t_train, t_test, kf)
+    s_train_flat = s_train.reshape(Ns, -1).T  # (t_train, Ns)
+    s_test_flat = s_test.reshape(Ns, -1).T  # (t_test, Ns)
 
     # Prepare encoders
-    encoders_nolag_target = [
-        # VAE(
-        #     model=VAEModel(units=[Ns, 250, 200, Nu]),
-        #     batch_size=128,
-        #     epochs=10,
-        # ),
-    ]
-
-    encoders_lagged_target = [
+    encoders = [
         PredPCAEncoder(
             model=PredPCA(
                 kp_list=range(0, 37, 2),
@@ -106,6 +98,7 @@ def compare_models(
                 model=VAEModel(units=[Ns, 250, 200, Nu]),
                 batch_size=128,
                 epochs=10,
+                lr=1e-3,
             ),
             predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=250),
             predictor_epochs=10,
@@ -116,13 +109,7 @@ def compare_models(
 
     # Evaluate encoders
     results = {}
-
-    # encoders with no lagged target
-    for encoder in encoders_nolag_target:
-        results[encoder.name] = evaluate_encoder(encoder, s_train_flat, s_test_flat, s_train_flat, s_test_flat)
-
-    # encoders with lagged target
-    for encoder in encoders_lagged_target:
+    for encoder in encoders:
         if encoder.name == "PredPCA":
             results[encoder.name] = evaluate_encoder(encoder, s_train, s_test, s_target_train, s_target_test)
         else:
@@ -140,13 +127,12 @@ def prepare_data(
 ):
     npz = np.load(preproc_out_dir / "aloi_data.npz")
     data = npz["data"][:Ns, :].astype(float)
+    # s: (Ns, n_seq, seq_len)
     s_train, s_test, s_target_train, s_target_test = preproc_data(data, t_train, t_test, [kf], with_noise)
     s_target_train = s_target_train.squeeze().T  # (t_train, Ns)
     s_target_test = s_target_test.squeeze().T  # (t_test, Ns)
-    s_train_flat = s_train.reshape(Ns, -1).T  # (t_train, Ns)
-    s_test_flat = s_test.reshape(Ns, -1).T  # (t_test, Ns)
 
-    return s_train, s_test, s_train_flat, s_test_flat, s_target_train, s_target_test
+    return s_train, s_test, s_target_train, s_target_test
 
 
 def evaluate_encoder(
