@@ -5,29 +5,36 @@ import pandas as pd
 import seaborn as sns
 
 
+def load_results_json(results_dir: Path) -> list:
+    data = []
+    for seed_dir in results_dir.glob("seed_*"):
+        seed = int(seed_dir.name.split("_")[-1])
+
+        with open(seed_dir / "results.json") as f:
+            results = json.load(f)
+            for model, metrics in results.items():
+                data.append(
+                    {
+                        "Model": model.replace("_", " "),
+                        "Error": metrics["prediction_error"] * 100,
+                        "Seed": seed,
+                    }
+                )
+    return data
+
+
 def plot_comparison_results(
-    results_path: Path,
+    results_dir: Path,
     save_dir: Path,
 ):
     """Plot comparison results of different models.
 
     Args:
-        results_path: Path to results.json
+        results_dir: Directory containing seed_* subdirectories
         save_dir: Directory to save the plot
     """
     # Load results
-    with open(results_path) as f:
-        results = json.load(f)
-
-    # Create DataFrame
-    data = []
-    for model in results.keys():
-        data.append(
-            {
-                "Model": model.replace("_", " "),
-                "Error": results[model]["prediction_error"] * 100,
-            }
-        )
+    data = load_results_json(results_dir)
     df = pd.DataFrame(data)
 
     # Sort models by error
@@ -45,6 +52,8 @@ def plot_comparison_results(
         height=6,
         aspect=1.2,
         orient="h",
+        errorbar="se",  # Show standard error
+        capsize=0.1,  # Add caps to error bars
     )
 
     g.ax.set_xlabel("Prediction error (%)")
@@ -62,6 +71,6 @@ def plot_comparison_results(
 if __name__ == "__main__":
     base_path = Path(__file__).parent.parent / "aloi/output/model_comparison"
     plot_comparison_results(
-        results_path=base_path / "results.json",
+        results_dir=base_path,
         save_dir=base_path,
     )

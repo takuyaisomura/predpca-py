@@ -33,15 +33,18 @@ kf = 12  # future timepoint to be used for prediction targets
 Ns = 300  # dimensionality of inputs
 Nu = 150  # dimensionality of encoders
 
-np.random.seed(1000000)
 
+def main(seed: int):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
-def main():
-    out_dir.mkdir(parents=True, exist_ok=True)
-    results = compare_models(t_train, t_test, kf)
+    out_subdir = out_dir / f"seed_{seed}"
+    out_subdir.mkdir(parents=True, exist_ok=True)
+    results = compare_models(t_train, t_test, kf, out_subdir)
 
     # save results
-    with open(out_dir / "results.json", "w") as f:
+    with open(out_subdir / "results.json", "w") as f:
         json.dump(results, f, indent=4)
 
     # Display the results
@@ -55,6 +58,7 @@ def compare_models(
     t_train: int,
     t_test: int,
     kf: int,
+    out_dir: Path,
 ):
     s_train, s_test, s_target_train, s_target_test = prepare_data(preproc_out_dir, t_train, t_test, kf)
     s_train_flat = s_train.reshape(Ns, -1).T  # (t_train, Ns)
@@ -111,9 +115,11 @@ def compare_models(
     results = {}
     for encoder in encoders:
         if encoder.name == "PredPCA":
-            results[encoder.name] = evaluate_encoder(encoder, s_train, s_test, s_target_train, s_target_test)
+            results[encoder.name] = evaluate_encoder(encoder, s_train, s_test, s_target_train, s_target_test, out_dir)
         else:
-            results[encoder.name] = evaluate_encoder(encoder, s_train_flat, s_test_flat, s_target_train, s_target_test)
+            results[encoder.name] = evaluate_encoder(
+                encoder, s_train_flat, s_test_flat, s_target_train, s_target_test, out_dir
+            )
 
     return results
 
@@ -141,6 +147,7 @@ def evaluate_encoder(
     s_test: np.ndarray,
     s_target_train: np.ndarray,
     s_target_test: np.ndarray,
+    out_dir: Path,
 ) -> dict[str, float]:
     """Evaluate a single encoder using specified classifier and metrics
 
@@ -212,4 +219,7 @@ def plot_losses(
 
 
 if __name__ == "__main__":
-    main()
+    main(seed=1)
+
+    # for seed in range(10):
+    #     main(seed=1000000 + seed)

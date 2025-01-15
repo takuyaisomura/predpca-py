@@ -5,48 +5,52 @@ import pandas as pd
 import seaborn as sns
 
 
-def plot_comparison_results(
-    results_path1: Path,
-    results_path2: Path,
-    save_dir: Path,
-):
-    """Plot comparison results of two sequence types.
-
-    Args:
-        results_path1: Path to results.json for sequence type 1
-        results_path2: Path to results.json for sequence type 2
-        save_dir: Directory to save the plot
-    """
-    # Load results
-    with open(results_path1) as f:
-        results1 = json.load(f)
-    with open(results_path2) as f:
-        results2 = json.load(f)
-
-    # Create DataFrame
+def load_results_json(results_dir: Path, sequence_type: str) -> list:
     data = []
-    for model in results1.keys():
-        data.append(
-            {
-                "Model": model,
-                "Error": results1[model]["categorization_error"] * 100,
-                "Sequence": "Ascending",
-            }
-        )
-        data.append(
-            {
-                "Model": model,
-                "Error": results2[model]["categorization_error"] * 100,
-                "Sequence": "Fibonacci",
-            }
-        )
-    df = pd.DataFrame(data)
+    for seed_dir in results_dir.glob("seed_*"):
+        seed = int(seed_dir.name.split("_")[-1])
+
+        with open(seed_dir / "results.json") as f:
+            results = json.load(f)
+            for model, metrics in results.items():
+                data.append(
+                    {
+                        "Model": model,
+                        "Error": metrics["categorization_error"] * 100,
+                        "Sequence": sequence_type,
+                        "Seed": seed,
+                    }
+                )
+    return data
+
+
+def create_comparison_dataframe(data1: list, data2: list) -> pd.DataFrame:
+    df = pd.DataFrame(data1 + data2)
 
     # Sort models by average error
     model_order = df.groupby("Model")["Error"].mean().sort_values().index.tolist()
     df["Model"] = pd.Categorical(df["Model"], categories=model_order, ordered=True)
 
-    # Create figure
+    return df
+
+
+def plot_comparison_results(
+    results_dir1: Path,
+    results_dir2: Path,
+    save_dir: Path,
+):
+    """Plot comparison results of two sequence types with error bars.
+
+    Args:
+        results_dir1: Directory containing results for sequence type 1 (multiple seeds)
+        results_dir2: Directory containing results for sequence type 2 (multiple seeds)
+        save_dir: Directory to save the plot
+    """
+    data1 = load_results_json(results_dir1, "Ascending")
+    data2 = load_results_json(results_dir2, "Fibonacci")
+
+    df = create_comparison_dataframe(data1, data2)
+
     sns.set_theme(style="ticks", font_scale=2.5)
     g = sns.catplot(
         data=df,
@@ -58,6 +62,8 @@ def plot_comparison_results(
         height=6,
         aspect=1.2,
         orient="h",
+        errorbar="se",  # Show standard error
+        capsize=0.1,  # Add caps to error bars
     )
 
     g.ax.set_xlabel("Categorization error (%)")
@@ -75,7 +81,7 @@ def plot_comparison_results(
 if __name__ == "__main__":
     base_path = Path(__file__).parent.parent / "mnist/output/model_comparison"
     plot_comparison_results(
-        results_path1=base_path / "sequence_type_1/results.json",
-        results_path2=base_path / "sequence_type_2/results.json",
+        results_dir1=base_path / "sequence_type_1",
+        results_dir2=base_path / "sequence_type_2",
         save_dir=base_path,
     )

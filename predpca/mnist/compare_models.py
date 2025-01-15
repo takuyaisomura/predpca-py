@@ -29,17 +29,21 @@ t_val = 10000
 
 mnist_dir = Path(__file__).parent
 data_dir = mnist_dir / "data"
-out_dir = mnist_dir / "output" / "model_comparison" / f"sequence_type_{sequence_type}"
-
-np.random.seed(1000000)
+out_dir = mnist_dir / "output" / "model_comparison"
 
 
-def main():
-    out_dir.mkdir(parents=True, exist_ok=True)
-    results = compare_models(t_train, t_test, t_val)
+def main(seed: int):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    out_subdir = out_dir / f"sequence_type_{sequence_type}" / f"seed_{seed}"
+    out_subdir.mkdir(parents=True, exist_ok=True)
+
+    results = compare_models(t_train, t_test, t_val, out_subdir)
 
     # save results
-    with open(out_dir / "results.json", "w") as f:
+    with open(out_subdir / "results.json", "w") as f:
         json.dump(results, f, indent=4)
 
     # Display the results
@@ -49,7 +53,7 @@ def main():
             print(f"{metric_name}: {value}")
 
 
-def compare_models(t_train: int, t_test: int, t_val: int):
+def compare_models(t_train: int, t_test: int, t_val: int, out_dir: Path):
     input_train, input_test, input_val, label_test, input_mean = prepare_data(t_train, t_test, t_val)
     is_2step = sequence_type == 2
 
@@ -95,7 +99,7 @@ def compare_models(t_train: int, t_test: int, t_val: int):
     target_val = input_val
     for encoder in encoders_nolag_target:
         results[encoder.name] = evaluate_encoder(
-            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean, out_dir
         )
 
     # encoders with lagged target
@@ -109,7 +113,7 @@ def compare_models(t_train: int, t_test: int, t_val: int):
     target_val = np.roll(input_val, -1, axis=0)
     for encoder in encoders_lagged_target:
         results[encoder.name] = evaluate_encoder(
-            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean
+            encoder, input_train, input_test, input_val, target_train, target_val, label_test, input_mean, out_dir
         )
 
     return results
@@ -176,6 +180,7 @@ def evaluate_encoder(
     target_val: np.ndarray,
     label_test: np.ndarray,
     input_mean: np.ndarray,
+    out_dir: Path,
 ) -> dict[str, float]:
     """Evaluate a single encoder using specified classifier and metrics
 
@@ -188,6 +193,7 @@ def evaluate_encoder(
         target_val: Validation target data (n_samples, input_dim)
         label_test: Test labels (n_samples,)
         input_mean: Mean of input data for reconstruction (1, input_dim)
+        out_dir: Output directory for saving results
 
     Returns:
         Dictionary of metric names to values
@@ -265,4 +271,7 @@ def plot_losses(
 
 
 if __name__ == "__main__":
-    main()
+    main(seed=1)
+
+    # for seed in range(10):
+    #     main(seed=1000000 + seed)
