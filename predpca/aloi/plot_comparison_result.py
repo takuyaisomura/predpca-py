@@ -35,15 +35,15 @@ def plot_comparison_results(
     df["Model"] = pd.Categorical(df["Model"], categories=model_order, ordered=True)
 
     # Create figure
-    sns.set_theme(style="whitegrid", font_scale=2)
+    sns.set_theme(style="whitegrid", font_scale=2.5)
     g = sns.catplot(
         data=df,
         y="Model",
         x="Error",
         color="#0984E3",  # blue
         kind="bar",
-        height=8,
-        aspect=1.5,
+        height=6,
+        aspect=1.2,
         orient="h",
     )
 
