@@ -67,11 +67,6 @@ def compare_models(
             batch_size=128,
             epochs=10,
         ),
-        AE(
-            model=AEModel(units=[Ns, 250, 200, Nu]),
-            batch_size=128,
-            epochs=10,
-        ),
     ]
 
     encoders_lagged_target = [
@@ -98,17 +93,13 @@ def compare_models(
             base_ae=AE(
                 model=AEModel(units=[Ns, 250, 200, Nu]),
                 batch_size=128,
-                # batch_size=256,
-                # epochs=10,
-                epochs=30,
-                lr=1e-4,
-                # lr=1e-3,
+                epochs=10,
+                lr=1e-3,
             ),
-            # predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=128),
-            predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=256),
+            predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=250),
             predictor_epochs=10,
             batch_size=128,
-            predictor_lr=1e-4,
+            predictor_lr=1e-3,
         ),
     ]
 
