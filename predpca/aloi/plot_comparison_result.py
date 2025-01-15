@@ -24,7 +24,7 @@ def plot_comparison_results(
     for model in results.keys():
         data.append(
             {
-                "Model": model,
+                "Model": model.replace("_", " "),
                 "Error": results[model]["prediction_error"] * 100,
             }
         )
@@ -35,7 +35,7 @@ def plot_comparison_results(
     df["Model"] = pd.Categorical(df["Model"], categories=model_order, ordered=True)
 
     # Create figure
-    sns.set_theme(style="whitegrid", font_scale=2.5)
+    sns.set_theme(style="ticks", font_scale=2.5)
     g = sns.catplot(
         data=df,
         y="Model",
@@ -50,6 +50,9 @@ def plot_comparison_results(
     g.ax.set_xlabel("Prediction error (%)")
     g.ax.set_xlim(0, 100)
     g.ax.set_ylabel("")
+
+    # Add minor ticks
+    g.ax.set_xticks([10, 20, 30, 40, 60, 70, 80, 90], minor=True)
 
     # Save the plot
     save_dir.mkdir(parents=True, exist_ok=True)
