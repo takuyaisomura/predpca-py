@@ -33,8 +33,6 @@ class VAEModel(nn.Module):
             decoder_layers.append(nn.Linear(unit_in, unit_out))
             if unit_out != input_unit:
                 decoder_layers.append(nn.ReLU())
-            else:
-                decoder_layers.append(nn.Sigmoid())
         self.decoder = nn.Sequential(*decoder_layers)
 
         print(self)

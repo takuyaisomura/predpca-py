@@ -43,7 +43,7 @@ class PredAE(BaseEncoder):
 
     @property
     def name(self) -> str:
-        return "PredAE"
+        return f"{self.base_ae.name}_Predictor"
 
     def fit(
         self,

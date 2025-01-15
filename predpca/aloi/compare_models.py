@@ -62,11 +62,11 @@ def compare_models(
 
     # Prepare encoders
     encoders_nolag_target = [
-        VAE(
-            model=VAEModel(units=[Ns, 250, 200, Nu]),
-            batch_size=128,
-            epochs=10,
-        ),
+        # VAE(
+        #     model=VAEModel(units=[Ns, 250, 200, Nu]),
+        #     batch_size=128,
+        #     epochs=10,
+        # ),
     ]
 
     encoders_lagged_target = [
@@ -95,6 +95,17 @@ def compare_models(
                 batch_size=128,
                 epochs=10,
                 lr=1e-3,
+            ),
+            predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=250),
+            predictor_epochs=10,
+            batch_size=128,
+            predictor_lr=1e-3,
+        ),
+        PredAE(
+            base_ae=VAE(
+                model=VAEModel(units=[Ns, 250, 200, Nu]),
+                batch_size=128,
+                epochs=10,
             ),
             predictor_model=SimpleNN(latent_dim=Nu, hidden_dim=250),
             predictor_epochs=10,
