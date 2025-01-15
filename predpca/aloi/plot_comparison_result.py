@@ -42,7 +42,7 @@ def plot_comparison_results(
     df["Model"] = pd.Categorical(df["Model"], categories=model_order, ordered=True)
 
     # Create figure
-    sns.set_theme(style="ticks", font_scale=2.5)
+    sns.set_theme(style="ticks", font_scale=2.2)
     g = sns.catplot(
         data=df,
         y="Model",
@@ -53,10 +53,10 @@ def plot_comparison_results(
         aspect=1.2,
         orient="h",
         errorbar="se",  # Show standard error
-        capsize=0.1,  # Add caps to error bars
+        capsize=0.25,  # Add caps to error bars
     )
 
-    g.ax.set_xlabel("Prediction error (%)")
+    g.ax.set_xlabel("Test prediction error (%)")
     g.ax.set_xlim(0, 100)
     g.ax.set_ylabel("")
 

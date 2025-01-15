@@ -51,7 +51,7 @@ def plot_comparison_results(
 
     df = create_comparison_dataframe(data1, data2)
 
-    sns.set_theme(style="ticks", font_scale=2.5)
+    sns.set_theme(style="ticks", font_scale=2.2)
     g = sns.catplot(
         data=df,
         y="Model",
@@ -63,7 +63,7 @@ def plot_comparison_results(
         aspect=1.2,
         orient="h",
         errorbar="se",  # Show standard error
-        capsize=0.1,  # Add caps to error bars
+        capsize=0.25,  # Add caps to error bars
     )
 
     g.ax.set_xlabel("Categorization error (%)")
