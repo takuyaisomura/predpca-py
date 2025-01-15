@@ -8,15 +8,7 @@ from torchvision.utils import save_image
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.models.base_encoder import BaseEncoder
-from predpca.models.baselines.autoencoder.encoder import AE
-from predpca.models.baselines.autoencoder.model import AEModel
-from predpca.models.baselines.ltae.encoder import LTAE
-from predpca.models.baselines.ltae.model import LTAEModel
-from predpca.models.baselines.tae.encoder import TAE
-from predpca.models.baselines.tae.model import TAEModel
-from predpca.models.baselines.tica.encoder import TICA
-from predpca.models.baselines.vae.encoder import VAE
-from predpca.models.baselines.vae.model import VAEModel
+from predpca.models.baselines import AE, LTAE, TAE, TICA, VAE, AEModel, LTAEModel, TAEModel, VAEModel
 from predpca.models.ica import ICA
 from predpca.models.predpca.encoder import PredPCAEncoder
 from predpca.models.predpca.model import PredPCA
