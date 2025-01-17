@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.mnist.postprocess import postprocessing
 from predpca.mnist.visualize import visualize_encodings
-from predpca.predpca import compute_Q, create_basis_functions, predict_input
+from predpca.models.predpca.model import PredPCA
 
 train_randomness = True
 train_signflip = True
@@ -62,11 +62,9 @@ def main(
 
     # PredPCA
     print("PredPCA")
-    print("- compute maximum likelihood estimator")
-    s_train_, s_test_ = create_basis_functions(s_train, s_test, range(1, Kp + 1))
-    Q = compute_Q(s_train_, s_train, prior_s_=prior_s_)
-    se_train = predict_input(Q, s_train_)  # (Ns, T_train)
-    se_test = predict_input(Q, s_test_)  # (Ns, T_test)
+    predpca = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
+    se_train = predpca.fit_transform(s_train, s_train)  # (Ns, T_train)
+    se_test = predpca.transform(s_test)  # (Ns, T_test)
 
     print("- post-hoc PCA using eigenvalue decomposition")
     pca_post = PCA(n_components=Nu)

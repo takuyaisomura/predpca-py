@@ -2,10 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: current file",
+            "name": "current file",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "mnist/compare_models",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predpca/mnist/compare_models.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {
+            "name": "aloi/compare_models",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/predpca/aloi/compare_models.py",
             "console": "integratedTerminal",
             "justMyCode": false,
         }

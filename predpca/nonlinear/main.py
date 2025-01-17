@@ -5,9 +5,9 @@ import numpy as np
 from scipy import linalg
 from sklearn.decomposition import PCA
 
+from predpca.models.predpca.model import PredPCA
 from predpca.nonlinear.canonical_nonlinear_system import canonical_nonlinear_system
 from predpca.nonlinear.lorenz_attractor import lorenz_attractor
-from predpca.predpca import compute_Q, create_basis_functions, predict_input
 from predpca.utils.pcacov import pcacov
 
 T_train = 100000
@@ -17,7 +17,7 @@ Ns = 200
 sigma_z = 0.001
 sigma_o = 0.1
 
-Kp = 10
+Kp_list = range(1, 11)
 prior_s_ = 1.0
 
 data_dir = Path(__file__).parent / "data"
@@ -38,21 +38,9 @@ def main(
     s_train, s_test = generate_input(psi_train, psi_test)
     Nx = x_train.shape[0]
 
-    s_train_, s_test_ = create_basis_functions(
-        np.concatenate(
-            [
-                np.roll(s_train, 1, axis=1),
-                np.roll(s_test, 1, axis=1),
-            ],
-            axis=1,
-        ),
-        Kp,
-        T_train,
-        T_test,
-    )
-    Q = compute_Q(s_train_, s_train, prior_s_=prior_s_)
-    qs_train = predict_input(Q, s_train_)  # (Ns, T_train)
-    qs_test = predict_input(Q, s_test_)  # (Ns, T_test)
+    predpca = PredPCA(kp_list=Kp_list, prior_s_=prior_s_)
+    qs_train = predpca.fit_transform(s_train, s_train)  # (Ns, T_train)
+    qs_test = predpca.transform(s_test)  # (Ns, T_test)
 
     pca = PCA(n_components=Npsi).fit(qs_train.T)
     Cs = pca.components_  # (Npsi, Ns)

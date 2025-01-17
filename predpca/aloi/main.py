@@ -5,7 +5,7 @@ import numpy as np
 
 from predpca.aloi.predpca_utils import predict_encoding, preproc_data
 from predpca.aloi.visualize import plot_hidden_state, plot_true_and_pred_video
-from predpca.predpca import compute_Q, create_basis_functions_multi_seq, predict_input, predict_input_pca
+from predpca.models.predpca.model import PredPCA
 
 start_time = time.time()
 
@@ -49,14 +49,11 @@ def main(
 
     # PredPCA
     print(f"create basis functions: {(time.time() - start_time) / 60:.1f} min")
-    s_train_, se_test_ = create_basis_functions_multi_seq(s_train, s_test, Kp_list)
+    predpca = PredPCA(kp_list=Kp_list, prior_s_=prior_s_)
+    se_train = predpca.fit_transform(s_train, s_target_train)  # (Kf, Ns, T_train)
+    se_test = predpca.transform(s_test)  # (Kf, Ns, T_test)
 
-    print(f"maximum likelihood estimation: {(time.time() - start_time) / 60:.1f} min")
-    Q = compute_Q(s_train_, s_target_train, prior_s_=prior_s_)
-    se_train = predict_input(Q, s_train_)  # (Kf, Ns, T_train)
-    se_test = predict_input(Q, se_test_)  # (Kf, Ns, T_test)
-
-    W_pca_post = predict_input_pca(se_train)[0].T
+    W_pca_post = predpca.predict_input_pca(se_train)[0].T
     u_test = W_pca_post @ se_test[Kf_viz]  # predictive encoders (test) (Ns, T_test)
     u_sub_, _, _, _ = predict_encoding(W_pca_post, se_train, se_test)
 

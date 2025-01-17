@@ -12,7 +12,7 @@ from predpca.mnist.predpca_utils import (
     calculate_true_parameters,
     generate_true_hidden_states,
 )
-from predpca.predpca import compute_Q, create_basis_functions, predict_input, predict_input_pca
+from predpca.models.predpca.model import PredPCA
 
 train_randomness = True
 test_randomness = True
@@ -74,10 +74,9 @@ def main(
     s_val = train_std @ np.diag(1 / np.sqrt(np.mean(s_val**2, axis=1))) @ s_val
 
     print("compute maximum likelihood estimator")
-    # s_train_: (Ns * Kp, T_train), s_test_: (Ns * Kp, T_test)
-    s_train_, s_test_ = create_basis_functions(s_train, s_test, range(1, Kp + 1))
-    Q = compute_Q(s_train_, s_train, prior_s_=prior_s_)  # (Ns, Ns * Kp)
-    se_train = predict_input(Q, s_train_)
+    print("compute maximum likelihood estimator")
+    predpca = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
+    se_train = predpca.fit_transform(s_train, s_train)
 
     # true states and parameters
     print("compute true states and parameters")
@@ -98,14 +97,14 @@ def main(
     ) = calculate_true_parameters(s_val, x_val, prior_x)
 
     print("optimal state and parameter estimators obtained using supervised learning")
-    Q_opt = compute_Q(s_train_, x_train, prior_s_=prior_s_)
-    qx_opt_train = predict_input(Q_opt, s_train_)
-    qx_opt_test = predict_input(Q_opt, s_test_)
+    predpca_opt = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
+    qx_opt_train = predpca_opt.fit_transform(s_train, x_train)
+    qx_opt_test = predpca_opt.transform(s_test)
     Aopt = compute_A(s_train, x_train, prior_x)
 
     print("optimal state and parameter estimators obtained using PredPCA")
     qSigmas_opt = s_train @ s_train.T / T_train  # (Ns, Ns)
-    Copt, _, qSigmase_opt = predict_input_pca(se_train)
+    Copt, _, qSigmase_opt = predpca.predict_input_pca(se_train)
 
     err_qSigmase_opt = np.trace(qSigmas_opt - qSigmase_opt)
     err_A_opt1 = Nx * np.trace(qSigmas_opt - Aopt @ (x_train @ x_train.T) @ Aopt.T / T_train)
@@ -132,17 +131,15 @@ def main(
             T_sub = T_train // 10 * (h - 8)
         print(f"number of training samples: {T_sub}")
         s_sub = s_train[:, :T_sub]  # (Ns, T_sub)
-        s_sub_ = s_train_[:, :T_sub]  # (Ns * Kp, T_sub)
         x_sub = x_train[:, :T_sub]  # (Nx, T_sub)
 
         s_sub = s_sub - s_sub.mean(axis=1, keepdims=True)
-        s_sub_ = s_sub_ - s_sub_.mean(axis=1, keepdims=True)
         x_sub = x_sub - x_sub.mean(axis=1, keepdims=True)
 
         # PredPCA
-        Q = compute_Q(s_sub_, s_sub, prior_s_=prior_s_)  # mapping (Ns, Ns * Kp)
-        se_sub = predict_input(Q, s_sub_)  # input expectations (Ns, T_sub)
-        se_test = predict_input(Q, s_test_)  # input expectations (Ns, T_test)
+        predpca_sub = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
+        se_sub = predpca_sub.fit_transform(s_sub, s_sub)  # input expectations (Ns, T_sub)
+        se_test = predpca_sub.transform(s_test)  # input expectations (Ns, T_test)
 
         # eigenvalue decomposition
         pca_post = PCA(n_components=Ns)
@@ -157,9 +154,10 @@ def main(
         # theory
         err_supervised["th"][h] = err_qSigmase_opt + err_A_opt1 / T_sub + err_A_opt2 / T_sub
         # empirical
-        Q_sl = compute_Q(s_sub_, x_sub, prior_s_=prior_s_)  # mapping (Nx, Ns * Kp)
+        predpca_sl = PredPCA(kp_list=range(1, Kp + 1), prior_s_=prior_s_)
+        predpca_sl.fit(s_sub, x_sub)
+        qx_sl_test = predpca_sl.transform(s_test)  # hidden state expectation (Nx, T_test)
         A_sl = compute_A(s_sub, x_sub, prior_x)  # mapping (Ns, Nx)
-        qx_sl_test = predict_input(Q_sl, s_test_)  # hidden state expectation (Nx, T_test)
         err_supervised["em"][h] = np.mean(np.sum((s_test - A_sl @ qx_sl_test) ** 2, axis=0))
 
         # PredPCA
