@@ -23,10 +23,12 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = [
     "predpca",
-    "predpca.utils",
-    "predpca.mnist",
     "predpca.aloi",
     "predpca.bdd100k",
+    "predpca.mnist",
+    "predpca.models",
+    "predpca.nonlinear",
+    "predpca.utils",
 ]
 
 [tool.black]
