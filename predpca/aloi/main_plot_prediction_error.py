@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 
 from predpca.aloi.predpca_utils import predict_encoding, prediction_error, preproc_data
 from predpca.aloi.visualize import plot_hidden_state, plot_test_images, plot_true_and_pred_video
-from predpca.models.predpca.model import PredPCA
+from predpca.models import PredPCA
 
 start_time = time.time()
 

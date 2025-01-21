@@ -7,12 +7,8 @@ import torch
 from torchvision.utils import save_image
 
 from predpca.mnist.create_digit_sequence import create_digit_sequence
-from predpca.models.base_encoder import BaseEncoder
+from predpca.models import ICA, BaseEncoder, PredPCA, PredPCAEncoder, WTAClassifier
 from predpca.models.baselines import AE, LTAE, TAE, TICA, VAE, AEModel, LTAEModel, TAEModel, VAEModel
-from predpca.models.ica import ICA
-from predpca.models.predpca.encoder import PredPCAEncoder
-from predpca.models.predpca.model import PredPCA
-from predpca.models.wta_classifier import WTAClassifier
 
 sequence_type = 1
 t_train = 100000

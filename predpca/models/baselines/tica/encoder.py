@@ -3,7 +3,7 @@ from typing import Self
 import numpy as np
 from deeptime.decomposition import TICA as _TICA
 
-from predpca.models.base_encoder import BaseEncoder
+from predpca.models import BaseEncoder
 
 
 class TICA(BaseEncoder):

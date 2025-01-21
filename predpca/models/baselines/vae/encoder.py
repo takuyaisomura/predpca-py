@@ -6,8 +6,8 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from predpca.models.base_encoder import BaseEncoder
-from predpca.models.baselines.vae.model import VAEModel
+from predpca.models import BaseEncoder
+from predpca.models.baselines import VAEModel
 
 
 class VAE(BaseEncoder):

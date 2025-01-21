@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from predpca.mnist.create_digit_sequence import create_digit_sequence
 from predpca.mnist.postprocess import postprocessing
 from predpca.mnist.visualize import visualize_encodings
-from predpca.models.predpca.model import PredPCA
+from predpca.models import PredPCA
 
 train_randomness = True
 train_signflip = True

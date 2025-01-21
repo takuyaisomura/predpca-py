@@ -5,7 +5,7 @@ import numpy as np
 from scipy import linalg
 from sklearn.decomposition import PCA
 
-from predpca.models.predpca.model import PredPCA
+from predpca.models import PredPCA
 from predpca.nonlinear.canonical_nonlinear_system import canonical_nonlinear_system
 from predpca.nonlinear.lorenz_attractor import lorenz_attractor
 from predpca.utils.pcacov import pcacov

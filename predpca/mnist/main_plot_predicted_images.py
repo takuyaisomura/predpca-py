@@ -9,7 +9,7 @@ from predpca.mnist.postprocess import postprocessing
 from predpca.mnist.predpca_utils import generate_true_hidden_states
 from predpca.mnist.visualize import digit_image, visualize_encodings
 from predpca.mnist.wta_prediction import wta_prediction
-from predpca.models.predpca.model import PredPCA
+from predpca.models import PredPCA
 
 train_randomness = True
 test_randomness = False

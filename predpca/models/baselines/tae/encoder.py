@@ -7,8 +7,8 @@ from deeptime.decomposition.deep import TAEModel as _TAEModel
 from deeptime.util.data import TimeLaggedDataset
 from torch.utils.data import DataLoader
 
-from predpca.models.base_encoder import BaseEncoder
-from predpca.models.baselines.tae.model import TAEModel
+from predpca.models import BaseEncoder
+from predpca.models.baselines import TAEModel
 
 
 class TAE(BaseEncoder):

@@ -12,7 +12,7 @@ from predpca.mnist.predpca_utils import (
     calculate_true_parameters,
     generate_true_hidden_states,
 )
-from predpca.models.predpca.model import PredPCA
+from predpca.models import PredPCA
 
 train_randomness = True
 test_randomness = True

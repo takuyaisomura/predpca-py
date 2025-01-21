@@ -7,10 +7,8 @@ import torch
 from torchvision.utils import save_image
 
 from predpca.aloi.predpca_utils import preproc_data
-from predpca.models.base_encoder import BaseEncoder
+from predpca.models import BaseEncoder, PredPCA, PredPCAEncoder
 from predpca.models.baselines import AE, LTAE, TAE, TICA, VAE, AEModel, LTAEModel, PredAE, SimpleNN, TAEModel, VAEModel
-from predpca.models.predpca.encoder import PredPCAEncoder
-from predpca.models.predpca.model import PredPCA
 
 aloi_dir = Path(__file__).parent
 preproc_out_dir = aloi_dir / "output"
