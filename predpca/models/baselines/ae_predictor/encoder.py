@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from predpca.models import BaseEncoder
+from predpca.models.base_encoder import BaseEncoder
 
 
 class PredAE(BaseEncoder):

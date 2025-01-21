@@ -2,8 +2,8 @@ from typing import Self
 
 import numpy as np
 
-from predpca.models import BaseEncoder
-from predpca.models.baselines import LTAEModel
+from predpca.models.base_encoder import BaseEncoder
+from predpca.models.baselines.ltae.model import LTAEModel
 
 
 class LTAE(BaseEncoder):

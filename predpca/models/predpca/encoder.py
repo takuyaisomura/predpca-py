@@ -3,7 +3,8 @@ from typing import Self
 import numpy as np
 from sklearn.decomposition import PCA
 
-from predpca.models import BaseEncoder, PredPCA
+from predpca.models.base_encoder import BaseEncoder
+from predpca.models.predpca.model import PredPCA
 
 
 class IdentityProcessor:
