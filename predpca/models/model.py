@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 
-from predpca.utils.pcacov import pcacov
+from predpca.utils import pcacov
 
 
 class PredPCA:

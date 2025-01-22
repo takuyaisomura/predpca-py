@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from predpca.utils.pcacov import pcacov
+from predpca.utils import pcacov
 
 # Initialization
 start_time = time.time()

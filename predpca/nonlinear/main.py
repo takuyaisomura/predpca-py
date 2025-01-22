@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from predpca.models import PredPCA
 from predpca.nonlinear.canonical_nonlinear_system import canonical_nonlinear_system
 from predpca.nonlinear.lorenz_attractor import lorenz_attractor
-from predpca.utils.pcacov import pcacov
+from predpca.utils import pcacov
 
 T_train = 100000
 T_test = 100000
@@ -264,7 +264,7 @@ def plot_params(B, qB, amp, out_dir):
 
 if __name__ == "__main__":
     main(
-        sequence_type=1,
+        sequence_type=2,
         out_dir=out_dir,
         seed=0,
     )

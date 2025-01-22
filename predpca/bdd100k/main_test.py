@@ -7,8 +7,8 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-from predpca.utils.pcacov_torch import pcacov
-from predpca.utils.sym_positive_torch import sym_positive
+from predpca.utils import pcacov_torch as pcacov
+from predpca.utils import sym_positive
 
 torch.set_grad_enabled(False)
 
