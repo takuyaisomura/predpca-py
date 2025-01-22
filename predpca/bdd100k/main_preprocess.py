@@ -8,8 +8,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from predpca.utils.device_manager import DeviceManager
-from predpca.utils.pcacov_torch import pcacov
+from predpca.utils import DeviceManager
+from predpca.utils import pcacov_torch as pcacov
 
 torch.set_grad_enabled(False)
 

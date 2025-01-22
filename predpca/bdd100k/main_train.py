@@ -10,7 +10,7 @@ import torch
 import torchvision.transforms.v2 as transforms
 from tqdm import tqdm
 
-from predpca.utils.device_manager import DeviceManager
+from predpca.utils import DeviceManager
 
 start_time = time.time()
 
