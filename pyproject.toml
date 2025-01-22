@@ -21,15 +21,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = [
-    "predpca",
-    "predpca.aloi",
-    "predpca.bdd100k",
-    "predpca.mnist",
-    "predpca.models",
-    "predpca.nonlinear",
-    "predpca.utils",
-]
+packages = { find = {} }
 
 [tool.black]
 line-length = 120
