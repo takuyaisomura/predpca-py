@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 from predpca.models.base_encoder import BaseEncoder
-from predpca.models.predpca.model import PredPCA
+from predpca.models.model import PredPCA
 
 
 class IdentityProcessor:
