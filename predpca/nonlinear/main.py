@@ -10,12 +10,12 @@ from predpca.nonlinear.canonical_nonlinear_system import canonical_nonlinear_sys
 from predpca.nonlinear.lorenz_attractor import lorenz_attractor
 from predpca.utils import pcacov
 
-T_train = 100000
-T_test = 100000
-Npsi = 100
-Ns = 200
-sigma_z = 0.001
-sigma_o = 0.1
+T_train = 100000  # number of training samples
+T_test = 100000  # number of test samples
+Npsi = 100  # dimension of hidden basis
+Ns = 200  # number of observed variables
+sigma_z = 0.001  # noise level of hidden basis
+sigma_o = 0.1  # noise level of observed variables
 
 Kp_list = range(1, 11)
 prior_s_ = 1.0
@@ -29,169 +29,78 @@ def main(
     out_dir: Path,
     seed: int = 0,
 ):
+    """Main function to run PredPCA analysis"""
     out_dir /= f"type{sequence_type}"
     out_dir.mkdir(parents=True, exist_ok=True)
+    np.random.seed(1000000 + seed)
 
-    np.random.seed(1000000 + seed)  # set seed for reproducibility
-
+    # Generate data
+    # (Nx, T_train), (Nx, T_test), (Npsi, T_train), (Npsi, T_test)
     x_train, x_test, psi_train, psi_test = generate_hidden_state(sequence_type)
-    s_train, s_test = generate_input(psi_train, psi_test)
+    s_train, s_test = generate_input(psi_train, psi_test)  # (Ns, T_train), (Ns, T_test)
     Nx = x_train.shape[0]
 
+    # Perform PredPCA
     predpca = PredPCA(kp_list=Kp_list, prior_s_=prior_s_)
     qs_train = predpca.fit_transform(s_train, s_train)  # (Ns, T_train)
     qs_test = predpca.transform(s_test)  # (Ns, T_test)
 
+    # Dimensionality reduction using PCA
     pca = PCA(n_components=Npsi).fit(qs_train.T)
     Cs = pca.components_  # (Npsi, Ns)
     Ls = pca.explained_variance_  # (Npsi,)
     qpsi_train = Cs @ qs_train  # (Npsi, T_train)
     qpsi_test = Cs @ qs_test  # (Npsi, T_test)
     qpsic = Cs @ s_train  # (Npsi, T_train)
-    # qpsi_train = pca.transform(qs_train.T).T  # (Npsi, T_train)
-    # qpsi_test = pca.transform(qs_test.T).T  # (Npsi, T_test)
-    # qpsic = pca.transform(s_train.T).T  # (Npsi, T_train)
+
+    # Estimate transition matrix
     qPsi = linalg.solve(
         (qpsi_train @ qpsi_train.T).T,
         (np.roll(qpsi_train, -1, axis=1) @ qpsi_train.T).T,
     ).T  # (Npsi, Npsi)
-    U, svals, Vh = linalg.svd(qPsi)
-    qSigmap = (Vh.T @ linalg.inv(np.diag(svals) + np.eye(Npsi) * 0.001) @ U.T) @ (
-        np.roll(qpsic, -1, axis=1) @ qpsic.T / T_train
-    )
+
+    # Estimate hidden basis covariance
+    U, svals, Vh = linalg.svd(qPsi)  # (Npsi, Npsi), (Npsi,), (Npsi, Npsi)
+    reg_inv = Vh.T @ np.diag(1 / (svals + 0.001)) @ U.T
+    qSigmap = reg_inv @ np.roll(qpsic, -1, axis=1) @ qpsic.T / T_train  # (Npsi, Npsi)
     qSigmap = (qSigmap + qSigmap.T) / 2
     qSigmap += np.eye(Npsi) * 5.0  # avoid singular matrix
-    Cp, Lp, _ = pcacov(qSigmap)
 
+    # Compute eigenvalues and components
+    Cp, Lp, _ = pcacov(qSigmap)
     pca = PCA().fit(psi_train.T)
     L = pca.explained_variance_  # (Npsi,)
 
-    plt.figure()
-    plt.subplot(1, 2, 1)  # eigenvalues
-    plt.plot(range(1, Npsi + 1), L)
-    plt.plot(range(1, Npsi + 1), Lp)
-    plt.plot(range(1, Npsi + 1), Ls)
-    plt.subplot(1, 2, 2)  # diff of eigenvalues
-    plt.plot(range(1, Npsi + 1), L - np.append(L[1:], 0))
-    plt.plot(range(1, Npsi + 1), Lp - np.append(Lp[1:], 0))
-    plt.savefig(out_dir / "eigenvalues.png")
+    # Plot eigenvalue analysis
+    plot_eigenvalue_analysis(L, Lp, Ls, out_dir)
 
-    var_inv = np.diag(1 / np.sqrt(Lp[:Nx]))
+    # Estimate states
+    qx_train, qx_test = estimate_states(qpsi_train, qpsi_test, x_train, Cp, Lp, Nx)
+
+    # Estimate parameters
+    B, qB = estimate_parameters(sequence_type, x_train, qx_train, psi_train, qpsi_train, T_train, Nx)
+
+    # Save results and create plots
+    save_results(out_dir, seed, x_test, qx_test, Nx, T_test, L, Lp, B, qB)
+    plot_states(x_test, qx_test, out_dir)
+    amp = 400 if sequence_type == 1 else 2000
+    plot_params(B, qB, amp, out_dir)
+
+    return qx_train, qx_test, qpsi_train, qpsi_test, B, qB, Cp, Lp
+
+
+def estimate_states(qpsi_train, qpsi_test, x_train, Cp, Lp, Nx):
+    """Estimate state variables"""
+    var_inv = np.diag(1 / np.sqrt(Lp[:Nx]))  # (Nx, Nx)
     qx_train = var_inv @ Cp[:, :Nx].T @ qpsi_train  # (Nx, T_train)
     qx_test = var_inv @ Cp[:, :Nx].T @ qpsi_test  # (Nx, T_test)
 
+    # Compute ambiguity factor that resolves the inherent indeterminacy between the estimated and true state variables
     Omegax = linalg.solve((qx_train @ qx_train.T).T, (x_train @ qx_train.T).T).T  # (Nx, Nx)
-    qx_train = Omegax @ qx_train
-    qx_test = Omegax @ qx_test
+    qx_train = Omegax @ qx_train  # (Nx, T_train)
+    qx_test = Omegax @ qx_test  # (Nx, T_test)
 
-    Omegap = linalg.solve((qpsi_train @ qpsi_train.T + np.eye(Npsi)).T, (psi_train @ qpsi_train.T).T).T  # (Npsi, Npsi)
-    qpsi_train = Omegap @ qpsi_train
-    qpsi_test = Omegap @ qpsi_test
-
-    print(f"Correlation matrix between original and reconstructed states (number of state variables: {Nx})")
-    with np.printoptions(precision=3, floatmode="fixed", suppress=True):
-        print(np.corrcoef(x_test, qx_test).T[:Nx, Nx:])
-
-    plot_states(x_test, qx_test, out_dir)
-
-    if sequence_type == 1:
-        B = linalg.solve(
-            (psi_train @ psi_train.T + np.eye(Npsi)).T,
-            (np.roll(x_train, -1, axis=1) @ psi_train.T).T,
-        ).T  # (Nx, Npsi)
-        qB = linalg.solve(
-            (qpsi_train @ qpsi_train.T + np.eye(Npsi)).T,
-            (np.roll(qx_train, -1, axis=1) @ qpsi_train.T).T,
-        ).T  # (Nx, Npsi)
-        amp = 400
-    elif sequence_type == 2:
-        xx = np.vstack(
-            [
-                np.ones(T_train),
-                x_train,
-                x_train**2,
-                x_train[1] * x_train[2],
-                x_train[2] * x_train[0],
-                x_train[0] * x_train[1],
-            ]
-        )  # (1 + Nx * 2 + 3, T)
-        qxx = np.vstack(
-            [
-                np.ones(T_train),
-                qx_train,
-                qx_train**2,
-                qx_train[1] * qx_train[2],
-                qx_train[2] * qx_train[0],
-                qx_train[0] * qx_train[1],
-            ]
-        )  # (1 + Nx * 2 + 3, T)
-        B = linalg.solve(
-            (xx @ xx.T + np.eye(1 + Nx * 2 + 3)).T,
-            ((np.roll(x_train, -1, axis=1) - x_train) @ xx.T).T,
-        ).T  # (Nx, 1 + Nx * 2 + 3)
-        qB = linalg.solve(
-            (qxx @ qxx.T + np.eye(1 + Nx * 2 + 3)).T,
-            ((np.roll(qx_train, -1, axis=1) - qx_train) @ qxx.T).T,
-        ).T  # (Nx, 1 + Nx * 2 + 3)
-        amp = 2000
-
-    plot_params(B, qB, amp, out_dir)
-
-    # save results
-    np.savetxt(
-        out_dir / f"states_{seed}.csv",
-        np.vstack(
-            [
-                np.arange(1, Nx + 1),
-                np.arange(1, Nx + 1),
-                x_test[:, : T_test // 10].T,
-                qx_test[:, : T_test // 10].T,
-            ]
-        ),  # (2 + T2 // 10 * 2, Nx)
-        delimiter=",",
-    )
-    np.savetxt(
-        out_dir / f"correlation_{seed}.csv",
-        np.vstack(
-            [
-                np.arange(1, Nx + 1),
-                np.corrcoef(x_test, qx_test).T[:Nx, Nx:],
-            ]
-        ),  # (1 + Nx, Nx)
-        delimiter=",",
-    )
-    np.savetxt(
-        out_dir / f"eigenvalues_{seed}.csv",
-        np.vstack(
-            [
-                np.array([1, 2]),
-                np.column_stack([L, Lp]),
-            ]
-        ),  # (1 + Npsi, 2)
-        delimiter=",",
-    )
-    np.savetxt(
-        out_dir / f"param_B_{seed}.csv",
-        np.vstack(
-            [
-                np.arange(1, B.shape[1] + 1),
-                B,
-                qB,
-            ]
-        ),  # (1 + B.shape[0] * 2, B.shape[1])
-        delimiter=",",
-    )
-
-    return (
-        qx_train,
-        qx_test,
-        qpsi_train,
-        qpsi_test,
-        B,
-        qB,
-        Cp,
-        Lp,
-    )
+    return qx_train, qx_test
 
 
 def generate_hidden_state(sequence_type: int):
@@ -201,9 +110,15 @@ def generate_hidden_state(sequence_type: int):
     elif sequence_type == 2:
         Nx = 3
         x_train, x_test = lorenz_attractor(Nx, T_train, T_test)
+        # generate feature variables
+        # add bias term
+        x_train_bias = np.vstack([x_train, np.ones((1, T_train))])
+        x_test_bias = np.vstack([x_test, np.ones((1, T_test))])
+        # create random weights
         R = np.random.randn(Npsi, Nx + 1) / np.sqrt(Nx + 1)
-        psi_train = np.tanh(R @ np.vstack([x_train, np.ones((1, T_train))]))
-        psi_test = np.tanh(R @ np.vstack([x_test, np.ones((1, T_test))]))
+        # apply weights and add nonlinearity
+        psi_train = np.tanh(R @ x_train_bias)
+        psi_test = np.tanh(R @ x_test_bias)
     else:
         raise ValueError(f"Invalid sequence type: {sequence_type}")
 
@@ -211,14 +126,18 @@ def generate_hidden_state(sequence_type: int):
 
 
 def generate_input(psi_train, psi_test):
+    # Generate noisy observations
+    # Create random observation matrix
     U, svals, Vh = linalg.svd(np.random.randn(Ns, Npsi))
     S = np.zeros((Ns, Npsi))
     S[: svals.shape[0], : svals.shape[0]] = np.diag(svals)
     A = U @ S @ Vh
+    # Add observation noise
     omega_train = np.random.randn(Ns, T_train) * sigma_o
     omega_test = np.random.randn(Ns, T_test) * sigma_o
     s_train = A @ psi_train + omega_train
     s_test = A @ psi_test + omega_test
+    # Center the data
     s_train -= s_train.mean(axis=1, keepdims=True)
     s_test -= s_test.mean(axis=1, keepdims=True)
 
@@ -260,6 +179,121 @@ def plot_params(B, qB, amp, out_dir):
     plt.imshow(np.abs(qB * amp))
     plt.tight_layout()
     plt.savefig(out_dir / "param_B.png")
+
+
+def save_results(out_dir, seed, x_test, qx_test, Nx, T_test, L, Lp, B, qB):
+    """Save results to CSV files"""
+    np.savetxt(
+        out_dir / f"states_{seed}.csv",
+        np.vstack(
+            [
+                np.arange(1, Nx + 1),
+                np.arange(1, Nx + 1),
+                x_test[:, : T_test // 10].T,
+                qx_test[:, : T_test // 10].T,
+            ]
+        ),  # (2 + T_test // 10 * 2, Nx)
+        delimiter=",",
+    )
+    np.savetxt(
+        out_dir / f"correlation_{seed}.csv",
+        np.vstack(
+            [
+                np.arange(1, Nx + 1),
+                np.corrcoef(x_test, qx_test).T[:Nx, Nx:],
+            ]
+        ),  # (1 + Nx, Nx)
+        delimiter=",",
+    )
+    np.savetxt(
+        out_dir / f"eigenvalues_{seed}.csv",
+        np.vstack(
+            [
+                np.array([1, 2]),
+                np.column_stack([L, Lp]),
+            ]
+        ),  # (1 + Npsi, 2)
+        delimiter=",",
+    )
+    np.savetxt(
+        out_dir / f"param_B_{seed}.csv",
+        np.vstack(
+            [
+                np.arange(1, B.shape[1] + 1),
+                B,
+                qB,
+            ]
+        ),  # (1 + B.shape[0] * 2, B.shape[1])
+        delimiter=",",
+    )
+
+
+def plot_eigenvalue_analysis(L, Lp, Ls, out_dir):
+    """Plot eigenvalue analysis results"""
+    idx = np.arange(1, Npsi + 1)
+
+    plt.figure()
+    # eigenvalues
+    plt.subplot(1, 2, 1)
+    plt.plot(idx, L)
+    plt.plot(idx, Lp)
+    plt.plot(idx, Ls)
+    # diff of eigenvalues
+    plt.subplot(1, 2, 2)
+    plt.plot(idx, L - np.append(L[1:], 0))
+    plt.plot(idx, Lp - np.append(Lp[1:], 0))
+    plt.savefig(out_dir / "eigenvalues.png")
+    plt.close()
+
+
+def estimate_parameters(sequence_type, x_train, qx_train, psi_train, qpsi_train, T_train, Nx):
+    """Estimate system parameters based on sequence type"""
+    if sequence_type == 1:
+        B = linalg.solve(
+            (psi_train @ psi_train.T + np.eye(Npsi)).T,  # (Npsi, Npsi)
+            (np.roll(x_train, -1, axis=1) @ psi_train.T).T,  # (Npsi, Nx)
+        ).T  # (Nx, Npsi)
+        qB = linalg.solve(
+            (qpsi_train @ qpsi_train.T + np.eye(Npsi)).T,  # (Npsi, Npsi)
+            (np.roll(qx_train, -1, axis=1) @ qpsi_train.T).T,  # (Npsi, Nx)
+        ).T  # (Nx, Npsi)
+
+    elif sequence_type == 2:
+        xx = np.vstack(
+            [
+                np.ones(T_train),  # (1, T_train)
+                x_train,  # (Nx, T_train)
+                x_train**2,  # (Nx, T_train)
+                x_train[1] * x_train[2],  # (1, T_train)
+                x_train[2] * x_train[0],  # (1, T_train)
+                x_train[0] * x_train[1],  # (1, T_train)
+            ]
+        )  # (1 + Nx * 2 + 3, T_train)
+
+        qxx = np.vstack(
+            [
+                np.ones(T_train),  # (1, T_train)
+                qx_train,  # (Nx, T_train)
+                qx_train**2,  # (Nx, T_train)
+                qx_train[1] * qx_train[2],  # (1, T_train)
+                qx_train[2] * qx_train[0],  # (1, T_train)
+                qx_train[0] * qx_train[1],  # (1, T_train)
+            ]
+        )  # (1 + Nx * 2 + 3, T_train)
+
+        B = linalg.solve(
+            (xx @ xx.T + np.eye(1 + Nx * 2 + 3)).T,  # (1 + Nx * 2 + 3, 1 + Nx * 2 + 3)
+            ((np.roll(x_train, -1, axis=1) - x_train) @ xx.T).T,  # (1 + Nx * 2 + 3, Nx)
+        ).T  # (Nx, 1 + Nx * 2 + 3)
+        qB = linalg.solve(
+            (qxx @ qxx.T + np.eye(1 + Nx * 2 + 3)).T,  # (1 + Nx * 2 + 3, 1 + Nx * 2 + 3)
+            ((np.roll(qx_train, -1, axis=1) - qx_train) @ qxx.T).T,  # (1 + Nx * 2 + 3, Nx)
+        ).T  # (Nx, 1 + Nx * 2 + 3)
+
+    else:
+        raise ValueError(f"Invalid sequence type: {sequence_type}")
+
+    return B, qB
 
 
 if __name__ == "__main__":
