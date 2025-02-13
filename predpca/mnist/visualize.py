@@ -19,6 +19,7 @@ def visualize_encodings(
     ui_test,  # (Nu, T_test)
     label_test,  # (1, T_test)
     ts,  # time steps to plot
+    figsize=(10, 15),
 ):
     T_test = ui_test.shape[1]
     colors = np.zeros((T_test, 3))
@@ -27,7 +28,7 @@ def visualize_encodings(
         colors[label_test[0] == label] = color
 
     # compare continuous latent variables (0 vs 1, 2 vs 3, ...)
-    fig, axs = plt.subplots(3, 2, figsize=(10, 15))
+    fig, axs = plt.subplots(3, 2, figsize=figsize)
     for i, ax in enumerate(axs.flatten()):
         if i == axs.size - 1:
             # Create a legend for all digits in the last subplot
@@ -49,12 +50,12 @@ def digit_image(
     input: np.ndarray,  # (784, T)
 ) -> np.ndarray:
     T = input.shape[1]
-    img = np.zeros((28, 28 * T))
+    img = np.zeros((28, 28 * T), dtype=np.uint8)
 
     for t in range(T):
         img[:, 28 * t : 28 * (t + 1)] = input[:, t].reshape((28, 28), order="F").T
 
-    img = np.uint8((1 - img.clip(0, 1)) * 255)
+    img = ((1 - img.clip(0, 1)) * 255).astype(np.uint8)
     img = img.repeat(5, axis=0).repeat(5, axis=1)  # (28 * 5, 28 * T * 5)
     dstimg = np.stack([img, img, img], axis=-1)  # (28 * 5, 28 * T * 5, 3)
 
