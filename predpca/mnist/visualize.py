@@ -36,10 +36,12 @@ def visualize_encodings(
             ax.legend(handles=legend_elements, loc="center", ncol=2, title="Digit Colors")
             ax.axis("off")
             break
-        ax.scatter(ui_test[i * 2, ts], ui_test[i * 2 + 1, ts], c=colors[ts], s=10)
+        # Use consecutive pairs since the input is already sorted
+        idx1, idx2 = i * 2, i * 2 + 1
+        ax.scatter(ui_test[idx1, ts], ui_test[idx2, ts], c=colors[ts], s=10)
         ax.axis("equal")
         ax.axis("square")
-        ax.set_title(f"Latent {i * 2} vs {i * 2 + 1}")
+        ax.set_title(f"Latent {idx1} vs {idx1 + 1}")
 
     plt.tight_layout()
 

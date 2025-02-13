@@ -73,13 +73,17 @@ def main(
 
     # ICA
     print("ICA")
-    ui_train, ui_test, Wica, v_test, _ = postprocessing(u_train, u_test, label_test)
-    # ui_train: (Nu, T_train), ui_test: (Nu, T_test), v_test: (Nv, T_test)
+    ui_train, ui_test, Wica, v_test, G = postprocessing(u_train, u_test, label_test)
+    # ui_train: (Nu, T_train), ui_test: (Nu, T_test), v_test: (Nv, T_test), G: (Nv, Nv)
+
+    # Sort latent variables based on confusion matrix G
+    latent_to_digit = G.argmax(axis=0)  # For each latent variable, find the most corresponding digit
+    digit_to_latent = np.argsort(latent_to_digit)  # Reorder latents to match digits 0-9
+    ui_test_sorted = ui_test[digit_to_latent]
 
     # Plotting
-    fig = visualize_encodings(ui_test, label_test, range(T_test // 10))
+    fig = visualize_encodings(ui_test_sorted, label_test, range(T_test // 10))
     fig.savefig(out_dir / "encodings.png")
-    # fig.show()
 
     # Output files for Fig 2a
     if sequence_type == 1:
