@@ -73,11 +73,11 @@ def main(
 
     # ICA
     print("ICA")
-    ui_train, ui_test, Wica, v_test, G = postprocessing(u_train, u_test, label_test)
-    # ui_train: (Nu, T_train), ui_test: (Nu, T_test), v_test: (Nv, T_test), G: (Nv, Nv)
+    ui_train, ui_test, Wica, v_test, conf_mat = postprocessing(u_train, u_test, label_test)
+    # ui_train: (Nu, T_train), ui_test: (Nu, T_test), v_test: (Nv, T_test), conf_mat: (Nv, Nv)
 
-    # Sort latent variables based on confusion matrix G
-    latent_to_digit = G.argmax(axis=0)  # For each latent variable, find the most corresponding digit
+    # Sort latent variables based on confusion matrix
+    latent_to_digit = conf_mat.argmax(axis=0)  # For each latent variable, find the most corresponding digit
     digit_to_latent = np.argsort(latent_to_digit)  # Reorder latents to match digits 0-9
     ui_test_sorted = ui_test[digit_to_latent]
 

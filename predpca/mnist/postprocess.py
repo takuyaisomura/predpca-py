@@ -38,14 +38,14 @@ def postprocessing(
     v_test = (ui_test == ui_test.max(axis=0)).astype(int)  # (Nv, T_test)
 
     # categorization error
-    G = np.zeros((Nv, Nv))  # confusion matrix (true vs pred)
+    conf_mat = np.zeros((Nv, Nv))  # confusion matrix (true vs pred)
     for i in range(Nv):
-        G[i, :] = np.sum(v_test[:, label_test[0] == i], axis=1)
+        conf_mat[i, :] = np.sum(v_test[:, label_test[0] == i], axis=1)
 
-    categorization_error = np.mean(1 - G.max(axis=0) / (G.sum(axis=0) + 0.001))
+    categorization_error = np.mean(1 - conf_mat.max(axis=0) / (conf_mat.sum(axis=0) + 0.001))
     print(f"categorization error = {categorization_error}")
 
-    return ui_train, ui_test, Wica, v_test, G
+    return ui_train, ui_test, Wica, v_test, conf_mat
 
 
 def ica(
