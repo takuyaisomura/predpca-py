@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def preproc_data(
+def prepare_train_test_sequences(
     data: np.ndarray,  # (Ns, T_train + T_test)
     T_train: int,
     T_test: int,
@@ -53,28 +53,20 @@ def predict_encoding(
     se_sub,  # (Kf, Ns, T)
     se_test,  # (Kf, Ns, T_test)
 ):
-    Nu = W_pca_post_opt.shape[0]
-    Kf, _, T = se_sub.shape
-    T_test = se_test.shape[-1]
-
-    u_sub_ = np.zeros((Nu, T))  # mean predictive encoders (training)
-    u_test_ = np.zeros((Nu, T_test))  # mean predictive encoders (test)
-    for k in range(Kf):
-        u_sub_ += W_pca_post_opt @ se_sub[k] / Kf
-        u_test_ += W_pca_post_opt @ se_test[k] / Kf
-
-    u_sub_mean = u_sub_.mean(axis=1, keepdims=True)
-    u_sub_ = u_sub_ - u_sub_mean
-    u_test_ = u_test_ - u_sub_mean
+    # mean predictive encoders
+    Kf = se_sub.shape[0]
+    u_sub = np.einsum("ij,kjt->it", W_pca_post_opt, se_sub) / Kf  # (Nu, T)
+    u_test = np.einsum("ij,kjt->it", W_pca_post_opt, se_test) / Kf  # (Nu, T_test)
+    # remove mean
+    u_sub_mean = u_sub.mean(axis=1, keepdims=True)
+    u_sub = u_sub - u_sub_mean
+    u_test = u_test - u_sub_mean
 
     # deviation of predictive encoders
-    du_sub = np.empty((Kf, Nu, T))
-    du_test = np.empty((Kf, Nu, T_test))
-    for k in range(Kf):
-        du_sub[k] = W_pca_post_opt @ se_sub[k] - u_sub_  # (Nu, T_sub)
-        du_test[k] = W_pca_post_opt @ se_test[k] - u_test_  # (Nu, T_test)
+    du_sub = np.einsum("ij,kjt->kit", W_pca_post_opt, se_sub) - u_sub  # (Kf, Nu, T)
+    du_test = np.einsum("ij,kjt->kit", W_pca_post_opt, se_test) - u_test  # (Kf, Nu, T_test)
 
-    return u_sub_, u_test_, du_sub, du_test
+    return u_sub, u_test, du_sub, du_test
 
 
 def prediction_error(

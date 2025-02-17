@@ -50,7 +50,7 @@ def plot_true_and_pred_video(
 
 def plot_hidden_state(
     W_pca_post_opt: np.ndarray,  # (Nu, Ns)
-    u_sub_: np.ndarray,  # (Nu, T_train)
+    u_sub: np.ndarray,  # (Nu, T_train)
     PCA_C1: np.ndarray,  # (2, 2, Ndata1, Ndata1)
     PCA_C2: np.ndarray,  # (Ndata2, Ndata2)
     mean1: np.ndarray,  # (2, 2, Ndata1)
@@ -58,9 +58,9 @@ def plot_hidden_state(
     WithNoise: bool,
     out_dir: Path,
 ):
-    T_train = u_sub_.shape[1]
+    T_train = u_sub.shape[1]
 
-    Wica = np.diag(1 / u_sub_[:Nv, :].std(axis=1, ddof=1))  # (Nv, Nv)
+    Wica = np.diag(1 / u_sub[:Nv, :].std(axis=1, ddof=1))  # (Nv, Nv)
 
     ica_rep = 8000
     sample_size = T_train // 10
@@ -73,11 +73,11 @@ def plot_hidden_state(
             eta = 0.005
 
         t_list = np.random.randint(0, T_train, sample_size)  # T_sub
-        v_sub = Wica @ u_sub_[:Nv, t_list]  # (Nv, T // 10)
+        v_sub = Wica @ u_sub[:Nv, t_list]  # (Nv, T // 10)
         g_sub = np.tanh(100 * v_sub)
         Wica = Wica + eta * (np.eye(Nv) - g_sub @ v_sub.T / sample_size) @ Wica  # (Nv, Nv)
 
-    v_sub = Wica @ u_sub_[:Nv, :]  # (Nv, T)
+    v_sub = Wica @ u_sub[:Nv, :]  # (Nv, T)
     idx = np.argsort(stats.kurtosis(v_sub, axis=1))[::-1]  # (Nv,)
     Omega = np.zeros((Nv, Nv))
     Omega[np.arange(Nv), idx] = 1
@@ -101,8 +101,9 @@ def plot_hidden_state(
     Wica = Omega @ Wica  # (Nv, Nv)
 
     # images corresponding to independent components
+    ic_to_obs = W_pca_post_opt[:Nv, :].T @ linalg.inv(Wica) * 20
     img = state_to_image(
-        W_pca_post_opt[:Nv, :].T @ linalg.inv(Wica) * 20,
+        ic_to_obs,
         PCA_C2,
         PCA_C1,
         mean1,

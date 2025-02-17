@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from predpca.aloi.predpca_utils import predict_encoding, preproc_data
+from predpca.aloi.predpca_utils import predict_encoding, prepare_train_test_sequences
 from predpca.aloi.visualize import plot_hidden_state, plot_true_and_pred_video
 from predpca.models import PredPCA
 
@@ -45,7 +45,9 @@ def main(
     data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
 
     print("preprocessing")
-    s_train, s_test, s_target_train, s_target_test = preproc_data(data, T_train, T_test, Kf_list, WithNoise)
+    s_train, s_test, s_target_train, s_target_test = prepare_train_test_sequences(
+        data, T_train, T_test, Kf_list, WithNoise
+    )
 
     # PredPCA
     print(f"create basis functions: {(time.time() - start_time) / 60:.1f} min")
@@ -54,8 +56,8 @@ def main(
     se_test = predpca.transform(s_test)  # (Kf, Ns, T_test)
 
     W_pca_post = predpca.predict_input_pca(se_train)[0].T
-    u_test = W_pca_post @ se_test[Kf_viz]  # predictive encoders (test) (Ns, T_test)
-    u_sub_, _, _, _ = predict_encoding(W_pca_post, se_train, se_test)
+    u_test_viz = W_pca_post @ se_test[Kf_viz]  # predictive encoders (test) (Ns, T_test)
+    u_train, _, _, _ = predict_encoding(W_pca_post, se_train, se_test)
 
     # visualizations
     PCA_C1 = npz["PCA_C1"]  # (2, 2, Ndata1, Ndata1)
@@ -65,17 +67,17 @@ def main(
     # true and predicted images (for Fig 3a and Suppl Movie)
     print(f"true and predicted images (time = {(time.time() - start_time) / 60:.1f} min)")
     print("create supplementary movie")
-    plot_true_and_pred_video(W_pca_post, u_test, s_target_test, PCA_C1, PCA_C2, mean1, out_dir)
+    plot_true_and_pred_video(W_pca_post, u_test_viz, s_target_test, PCA_C1, PCA_C2, mean1, out_dir)
     print("----------------------------------------\n")
 
     # hidden state analysis
     # ICA of mean encoders (for Fig 3b and Suppl Fig 4)
     print(f"ICA of mean encoders (time = {(time.time() - start_time) / 60:.1f} min)")
-    plot_hidden_state(W_pca_post, u_sub_, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
+    plot_hidden_state(W_pca_post, u_train, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
 
     print("----------------------------------------\n")
 
-    return u_test, u_sub_
+    return u_test_viz, u_train
 
 
 if __name__ == "__main__":

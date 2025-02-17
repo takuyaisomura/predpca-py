@@ -85,16 +85,16 @@ def main(
     u_test = pca.transform(se_test.T).T  # (Nu, T_test)
 
     # ICA
-    ui_train, ui_test, _, v_test, G = postprocessing(u_train, u_test, label_test)
+    ui_train, ui_test, _, v_test, conf_mat = postprocessing(u_train, u_test, label_test)
     # ui_train: (Nu, T_train)
     # ui_test: (Nu, T_test)
     # v_test: (Nv, T_test)
-    # G: (10, 10)
+    # conf_mat: (Nv, Nv)
 
     fig = visualize_encodings(ui_test, label_test, range(T_test // 10))
     fig.savefig(out_dir / f"output_encoders_{seq_label}_{seed}.png")
 
-    data_file = np.vstack((np.arange(10), 1 - G.max(axis=0) / (G.sum(axis=0) + 0.001)))
+    data_file = np.vstack((np.arange(10), 1 - conf_mat.max(axis=0) / (conf_mat.sum(axis=0) + 0.001)))
     np.savetxt(out_dir / f"output_err_{seq_label}_predpca_{seed}.csv", data_file, delimiter=",")
 
     Omega = np.corrcoef(x, ui_train)[:Nv, Nv:]  # correlation matrix of x and ui (Nv, Nv)

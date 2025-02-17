@@ -6,7 +6,7 @@ import numpy as np
 from scipy import linalg
 from sklearn.decomposition import PCA
 
-from predpca.aloi.predpca_utils import predict_encoding, prediction_error, preproc_data
+from predpca.aloi.predpca_utils import predict_encoding, prediction_error, prepare_train_test_sequences
 from predpca.aloi.visualize import plot_hidden_state, plot_test_images, plot_true_and_pred_video
 from predpca.models import PredPCA
 
@@ -59,7 +59,9 @@ def main(
     data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
 
     print("preprocessing")
-    s_train, s_test, s_target_train, s_target_test = preproc_data(data, T_train, T_test, Kf_list, WithNoise)
+    s_train, s_test, s_target_train, s_target_test = prepare_train_test_sequences(
+        data, T_train, T_test, Kf_list, WithNoise
+    )
 
     print("investigate the accuracy with limited number of training samples")
 
@@ -110,7 +112,7 @@ def main(
 
     # postprocessing
     print("postprocessing")
-    u_sub_, _, du_sub, du_test = predict_encoding(W_pca_post_opt, se_sub, se_test)
+    u_sub, _, du_sub, du_test = predict_encoding(W_pca_post_opt, se_sub, se_test)
 
     # postprocess error
     norm_s_test = (s_target_test[0] ** 2).sum(axis=0).mean()
@@ -128,7 +130,7 @@ def main(
     if not visualize:
         return
 
-    u_test = W_pca_post_opt @ se_test[Kf_viz]  # predictive encoders (test) (Nu[h], T_test)
+    u_test_viz = W_pca_post_opt @ se_test[Kf_viz]  # predictive encoders (test) (Nu[h], T_test)
 
     # plot test prediction error
     plot_test_pred_error(err_dst, err_s1["em"], out_dir)
@@ -140,20 +142,20 @@ def main(
     # true and predicted images (for Fig 3a and Suppl Movie)
     print(f"true and predicted images (time = {(time.time() - start_time) / 60:.1f} min)")
     print("create supplementary movie")
-    plot_true_and_pred_video(W_pca_post_opt, u_test, s_target_test, PCA_C1, PCA_C2, mean1, out_dir)
+    plot_true_and_pred_video(W_pca_post_opt, u_test_viz, s_target_test, PCA_C1, PCA_C2, mean1, out_dir)
     print("----------------------------------------\n")
 
     # hidden state analysis
     # ICA of mean encoders (for Fig 3b and Suppl Fig 4)
     print(f"ICA of mean encoders (time = {(time.time() - start_time) / 60:.1f} min)")
-    plot_hidden_state(W_pca_post, u_sub_, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
+    plot_hidden_state(W_pca_post, u_sub, PCA_C1, PCA_C2, mean1, Nv, WithNoise, out_dir)
 
     # PCA of deviation encoders (for Fig 3c)
     print(f"PCA of deviation encoders (time = {(time.time() - start_time) / 60:.1f} min)")
     plot_deviation_encoder(du_sub, du_test, out_dir)
 
     # plot test images
-    plot_test_images(W_pca_post_opt, u_test, PCA_C1, PCA_C2, mean1, out_dir)
+    plot_test_images(W_pca_post_opt, u_test_viz, PCA_C1, PCA_C2, mean1, out_dir)
 
     print("----------------------------------------\n")
 
