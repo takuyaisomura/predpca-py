@@ -128,10 +128,7 @@ def generate_hidden_state(sequence_type: int):
 def generate_input(psi_train, psi_test):
     # Generate noisy observations
     # Create random observation matrix
-    U, svals, Vh = linalg.svd(np.random.randn(Ns, Npsi))
-    S = np.zeros((Ns, Npsi))
-    S[: svals.shape[0], : svals.shape[0]] = np.diag(svals)
-    A = U @ S @ Vh
+    A = np.random.randn(Ns, Npsi)
     # Add observation noise
     omega_train = np.random.randn(Ns, T_train) * sigma_o
     omega_test = np.random.randn(Ns, T_test) * sigma_o
