@@ -119,7 +119,7 @@ def prepare_data(
     kf: int,
     with_noise: bool = False,
 ):
-    npz = np.load(preproc_out_dir / "aloi_data.npz")
+    npz = np.load(preproc_out_dir / "aloi_preprocessed.npz")
     data = npz["data"][:Ns, :].astype(float)
     # s: (Ns, n_seq, seq_len)
     s_train, s_test, s_target_train, s_target_test = preproc_data(data, t_train, t_test, [kf], with_noise)

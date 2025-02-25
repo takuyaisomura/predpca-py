@@ -55,7 +55,7 @@ def main(
     np.random.seed(1000000 + seed)
 
     print("loading data")
-    npz = np.load(preproc_out_dir / "aloi_data.npz")
+    npz = np.load(preproc_out_dir / "aloi_preprocessed.npz")
     data = npz["data"][:Ns, :].astype(float)  # (Ns, Timg)
 
     print("preprocessing")

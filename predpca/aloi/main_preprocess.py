@@ -98,7 +98,7 @@ def main(
     W2 = PCA_C2[:, :Npca2].T  # (Npca2, Ndata2)
     data = W2 @ (s - mean2[:, np.newaxis])  # (Npca2, Timg)
     np.savez_compressed(
-        out_dir / "aloi_data.npz",
+        out_dir / "aloi_preprocessed.npz",
         mean1=mean1,  # (2, 2, Ndata1)
         PCA_C1=PCA_C1,  # (2, 2, Ndata1, Ndata1)
         PCA_L1=PCA_L1,  # (2, 2, Ndata1)
