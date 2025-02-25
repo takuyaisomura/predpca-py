@@ -36,3 +36,19 @@ python main_plot_predicted_images.py
 ![output_fibonacci_predpca2_0_99991_100000](https://github.com/user-attachments/assets/3b687ee8-dc1f-4a26-87a2-619a4badb543)  
 Long-term prediction using PredPCA and ICA for the ascending (top) and Fibonacci (bottom) sequence (at T = 100,050 - 100,060).  
 A winner-takes-all operation is applied to make greedy predictions of the digit sequences.
+
+### main_compare_models.py
+```bash
+python main_compare_models.py
+```
+Comparison of categorization error rates (%) between different models on MNIST digit sequence prediction. The models compared include:
+- PredPCA
+- AE: Standard Auto-Encoder
+- VAE: Variational Auto-Encoder
+- TAE: Time-lagged Auto-Encoder
+- LTAE: Linear Time-lagged Auto-Encoder
+- TICA: Time-lagged Independent Component Analysis
+
+<img src="https://github.com/user-attachments/assets/4c0d98c9-63d6-4e62-a236-7e5c9ee00532" width="500" alt="model comparison"><br>
+The results show performance on both ascending and Fibonacci sequences.  
+Lower error rates indicate better performance in predicting and categorizing the digit sequences.
