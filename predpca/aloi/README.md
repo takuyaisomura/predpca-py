@@ -40,3 +40,18 @@ python main_plot_prediction_error.py
 <img src="https://github.com/user-attachments/assets/a9cd3f6a-e17a-40d3-b83f-198450a5dd3d" height="700" alt="test_prediction_error"><br>
 Comparison of test prediction error.  
 PredPCA (solid lines) show a smaller test prediction error and an earlier error convergence compared with the naive autoregressive model (dashed lines).
+
+### main_compare_models.py
+```bash
+python main_compare_models.py
+```
+Comparison of test prediction error (%) between different models. The models compared include:
+- PredPCA
+- AE: Standard Auto-Encoder
+- VAE: Variational Auto-Encoder
+- TAE: Time-lagged Auto-Encoder
+- LTAE: Linear Time-lagged Auto-Encoder
+- TICA: Time-lagged Independent Component Analysis
+
+<img src="https://github.com/user-attachments/assets/73904344-4027-435c-aa16-5aa8d60681b3" width="500" alt="model comparison"><br>
+The error is measured as the normalized mean squared error between predicted and actual images.
