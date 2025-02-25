@@ -13,7 +13,7 @@
             "name": "mnist/compare_models",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/predpca/mnist/compare_models.py",
+            "program": "${workspaceFolder}/predpca/mnist/main_compare_models.py",
             "console": "integratedTerminal",
             "justMyCode": false,
         },
@@ -21,7 +21,7 @@
             "name": "aloi/compare_models",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/predpca/aloi/compare_models.py",
+            "program": "${workspaceFolder}/predpca/aloi/main_compare_models.py",
             "console": "integratedTerminal",
             "justMyCode": false,
         }

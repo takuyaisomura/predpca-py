@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torchvision.utils import save_image
 
-from predpca.aloi.predpca_utils import preproc_data
+from predpca.aloi.predpca_utils import prepare_train_test_sequences
 from predpca.models import BaseEncoder, PredPCA, PredPCAEncoder
 from predpca.models.baselines import AE, LTAE, TAE, TICA, VAE, AEModel, LTAEModel, PredAE, SimpleNN, TAEModel, VAEModel
 
@@ -122,7 +122,9 @@ def prepare_data(
     npz = np.load(preproc_out_dir / "aloi_preprocessed.npz")
     data = npz["data"][:Ns, :].astype(float)
     # s: (Ns, n_seq, seq_len)
-    s_train, s_test, s_target_train, s_target_test = preproc_data(data, t_train, t_test, [kf], with_noise)
+    s_train, s_test, s_target_train, s_target_test = prepare_train_test_sequences(
+        data, t_train, t_test, [kf], with_noise
+    )
     s_target_train = s_target_train.squeeze().T  # (t_train, Ns)
     s_target_test = s_target_test.squeeze().T  # (t_test, Ns)
 
@@ -159,11 +161,6 @@ def evaluate_encoder(
     metrics = {
         "prediction_error": prediction_error,
     }
-
-    # Visualize reconstructed images
-    # TODO
-    # reconst_images = s_to_image(test_pred) + input_mean
-    # visualize_decodings(input_test, reconst_images, out_dir / f"{encoder.name.lower()}_decodings.png")
 
     # Plot learning curves
     if hasattr(encoder, "train_losses"):
