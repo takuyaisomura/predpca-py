@@ -19,28 +19,31 @@ Python implementation: Copyright (C) 2024 Araya Inc.
 
 ## Example Notebooks
 The following Colab notebooks provide explanations and usage examples of PredPCA:
-<div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-  <div style="text-align: center; width: 30%;">
-    <a href="https://drive.google.com/file/d/1zn_ouS3WkRXqVV5NPZm3tkf72KpuLPoF/view?usp=sharing">
-      <img src="assets/mnist_thumbnail.png" width="100%" alt="MNIST Example">
-    </a>
-    <p>Handwritten digits sequence (Fig.2)</p>
-  </div>
-  
-  <div style="text-align: center; width: 30%;">
-    <a href="https://drive.google.com/file/d/14sOk7SxToFh-E5ql_hbkzpmcUgjaM-v2/view?usp=sharing">
-      <img src="assets/aloi_thumbnail.png" width="100%" alt="ALOI Example">
-    </a>
-    <p>Rotating objects sequence (Fig.3)</p>
-  </div>
-  
-  <div style="text-align: center; width: 30%;">
-    <a href="https://drive.google.com/file/d/1CjOE8Jm6_-UHVU9iOndl3oYZ74p6eONi/view?usp=sharing">
-      <img src="assets/nonlinear_thumbnail.png" width="100%" alt="Nonlinear Example">
-    </a>
-    <p>Nonlinear time series (Suppl. Fig.1)</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://drive.google.com/file/d/1zn_ouS3WkRXqVV5NPZm3tkf72KpuLPoF/view?usp=sharing">
+        <img src="assets/mnist_thumbnail.png" width="100%" alt="MNIST Example">
+        <br><strong>MNIST</strong>
+      </a>
+      <p>Handwritten digits sequence (Fig.2)</p>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://drive.google.com/file/d/14sOk7SxToFh-E5ql_hbkzpmcUgjaM-v2/view?usp=sharing">
+        <img src="assets/aloi_thumbnail.png" width="100%" alt="ALOI Example">
+        <br><strong>ALOI</strong>
+      </a>
+      <p>Rotating objects sequence (Fig.3)</p>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://drive.google.com/file/d/1CjOE8Jm6_-UHVU9iOndl3oYZ74p6eONi/view?usp=sharing">
+        <img src="assets/nonlinear_thumbnail.png" width="100%" alt="Nonlinear Example">
+        <br><strong>Nonlinear</strong>
+      </a>
+      <p>Nonlinear time series (Suppl. Fig.1)</p>
+    </td>
+  </tr>
+</table>
 
 ## Contents
 ```
