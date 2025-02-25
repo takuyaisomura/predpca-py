@@ -41,7 +41,7 @@ A winner-takes-all operation is applied to make greedy predictions of the digit 
 ```bash
 python main_compare_models.py
 ```
-Comparison of categorization error rates (%) between different models on MNIST digit sequence prediction. The models compared include:
+Comparison of categorization error rates (%) between different models. The models compared include:
 - PredPCA
 - AE: Standard Auto-Encoder
 - VAE: Variational Auto-Encoder
