@@ -232,7 +232,7 @@ def process_batch(
     ffmpeg_command = (
         ffmpeg.input(path, ss=start_frame / 30)  # Assuming 30 fps
         .filter("select", f"gte(n,{0})")
-        .filter("select", f"lte(n,{read_length-1})")
+        .filter("select", f"lte(n,{read_length - 1})")
         .output("pipe:", format="rawvideo", pix_fmt="rgb24", vframes=read_length)
     )
     if device.type == "cuda":

@@ -114,7 +114,7 @@ def main(
 
 def load_u(test_out_dir: Path):
     u_lists = [
-        np.load(test_out_dir / f"predpca_lv1_u_{i+1}.npz")["u"] for i in range(test_num_batches)
+        np.load(test_out_dir / f"predpca_lv1_u_{i + 1}.npz")["u"] for i in range(test_num_batches)
     ]  # (test_num_batches, 2, 2, Nu, test_batch_size * 3)
     u_lists = [
         np.vstack([ls[i][j] for i in range(2) for j in range(2)]) for ls in u_lists
@@ -267,7 +267,7 @@ def read_batch(path, start_frame, end_frame):
     ffmpeg_command = (
         ffmpeg.input(path, ss=start_frame / 30)
         .filter("select", f"gte(n,{0})")
-        .filter("select", f"lte(n,{read_length-1})")
+        .filter("select", f"lte(n,{read_length - 1})")
         .output("pipe:", format="rawvideo", pix_fmt="rgb24", vframes=read_length)
     )
 

@@ -128,7 +128,7 @@ def process_video(
     data_buffer = torch.empty((ny1 * 2, nx1 * 2, batch_size, 3), dtype=torch.uint8, device=device)
 
     for k in range(num_batches):
-        logging.info(f"Batch {k+1}/{num_batches} (time = {(time.time() - start_time) / 60:.1f} min)")
+        logging.info(f"Batch {k + 1}/{num_batches} (time = {(time.time() - start_time) / 60:.1f} min)")
 
         start_frame = k * batch_size
         end_frame = min((k + 1) * batch_size, num_frames)
@@ -176,7 +176,7 @@ def process_batch(
     ffmpeg_command = (
         ffmpeg.input(path, ss=start_frame / 30)  # Assuming 30 fps, adjust if different
         .filter("select", f"gte(n,{0})")
-        .filter("select", f"lte(n,{read_length-1})")
+        .filter("select", f"lte(n,{read_length - 1})")
         .output("pipe:", format="rawvideo", pix_fmt="rgb24", vframes=read_length)
     )
     if device.type == "cuda":
