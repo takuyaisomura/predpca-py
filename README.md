@@ -65,9 +65,20 @@ It is recommended to use a virtual environment for installation. This project ha
     source venv/bin/activate  # On Windows, use venv\Scripts\activate.ps1 or activate.bat
     ```
 
-2. Install
-- Before installing, install FFmpeg and make sure it is in the PATH.
-    Use the [official download links](https://ffmpeg.org/download.html) or package managers (e.g. `sudo apt install ffmpeg` on Debian/Ubuntu, `brew install ffmpeg` on macOS)
+2. Install dependencies
+- FFmpeg
+  - Install from the [official download links](https://ffmpeg.org/download.html) or package managers, e.g.
+    - Windows: `winget install ffmpeg`
+    - macOS: `brew install ffmpeg`
+    - Ubuntu: `sudo apt install ffmpeg`
+- (optional) PyTorch and Torchvision
+  - These packages are required if you want to run the BDD100K demo (`predpca/bdd100k/`) or model comparison experiments (`predpca/*/main_compare_models.py`).
+  - Install from the [official website](https://pytorch.org/get-started/locally/).
+- (optional) [deeptime](https://github.com/deeptime-ml/deeptime)
+  - This package is required if you want to run the model comparison experiments.
+  - `pip install deeptime`
+
+3. Install the package
 - Option 1: Install from PyPI
     ```
     pip install predpca-py
