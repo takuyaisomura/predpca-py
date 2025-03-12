@@ -1,6 +1,6 @@
 [project]
 name = "predpca-py"
-version = "0.1.1"
+version = "0.1.2"
 description = "PredPCA: Predictive Principal Component Analysis"
 authors = [{ name = "Takuya Isomura", email = "takuya.isomura@riken.jp" }]
 maintainers = [
